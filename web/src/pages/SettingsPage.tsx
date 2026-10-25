@@ -56,7 +56,9 @@ function StoresSection({ stores, error, onSaved }: { stores: Store[]; error: unk
       <ul className="plain">
         {stores.map((s) => (
           <li key={s.code} className="row between">
-            <span className={s.is_active ? '' : 'dim'}>{s.code} {s.name}{s.is_active ? '' : '（停用）'}</span>
+            <span className={s.is_active ? '' : 'dim'}>
+              {s.code} {s.name}{s.receipt_prefix ? `・預結號碼 ${s.receipt_prefix}…` : ''}{s.is_active ? '' : '（停用）'}
+            </span>
             <button className="link" onClick={() => setEditing(s)}>修改</button>
           </li>
         ))}
@@ -72,7 +74,9 @@ function StoreDialog({ store, onClose, onSaved }: { store: Store; onClose: () =>
   const isNew = !store.code;
   async function save() {
     try {
-      await rpc('admin_upsert_store', { p_code: form.code, p_name: form.name, p_is_active: form.is_active });
+      await rpc('admin_upsert_store', {
+        p_code: form.code, p_name: form.name, p_is_active: form.is_active, p_receipt_prefix: form.receipt_prefix?.trim() || null,
+      });
       onSaved();
       onClose();
     } catch (e) {
@@ -84,6 +88,11 @@ function StoreDialog({ store, onClose, onSaved }: { store: Store; onClose: () =>
       <div className="stack">
         <label>門市代碼（英數字）<input value={form.code} disabled={!isNew} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
         <label>門市名稱<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+        <label>
+          預結號碼開頭（選填，例：75）
+          <input inputMode="numeric" value={form.receipt_prefix ?? ''} onChange={(e) => setForm({ ...form, receipt_prefix: e.target.value })} />
+        </label>
+        <p className="small muted">拍照辨識沒讀到門市代碼時，用預結號碼的開頭判斷是哪家門市。</p>
         <label className="radio"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />啟用</label>
         <ErrorBanner error={error} />
         <div className="row gap end">

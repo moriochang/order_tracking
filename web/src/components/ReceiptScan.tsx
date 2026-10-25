@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { parseReceiptText, type ParsedReceipt } from '../lib/receiptParser';
 import { linesFromWords } from '../lib/ocrLayout';
 import { compressImage } from '../lib/image';
-import { catalogByModels, ocrReceipt } from '../lib/api';
+import { catalogByModels, listStores, ocrReceipt } from '../lib/api';
 import { matchCatalogName } from '../lib/catalogMatch';
 import { fmtDate } from '../lib/format';
 import { Dialog, ErrorBanner } from './ui';
@@ -31,6 +31,21 @@ async function withCatalog(parsed: ParsedReceipt): Promise<ParsedReceipt> {
   };
 }
 
+// 預結號碼開頭對應門市：沒讀到門市代碼時用來判斷門市；兩者不一致時提示核對
+async function withStore(parsed: ParsedReceipt): Promise<ParsedReceipt> {
+  if (!parsed.receipt_no) return parsed;
+  const stores = await listStores().catch(() => []);
+  const match = stores
+    .filter((s) => s.receipt_prefix && parsed.receipt_no.startsWith(s.receipt_prefix))
+    .sort((a, b) => (b.receipt_prefix?.length ?? 0) - (a.receipt_prefix?.length ?? 0))[0];
+  if (!match) return parsed;
+  const label = `預結號碼開頭 ${match.receipt_prefix} 對應門市 ${match.code}`;
+  if (!parsed.store_code) return { ...parsed, store_code: match.code, checks: [...parsed.checks, { label, ok: true }] };
+  return { ...parsed, checks: [...parsed.checks, { label: `${label}，單據上的門市代碼 ${parsed.store_code}`, ok: parsed.store_code === match.code }] };
+}
+
+const enrich = async (parsed: ParsedReceipt) => withCatalog(await withStore(parsed));
+
 export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResult) => void; onClose: () => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<ParsedReceipt | null>(null);
@@ -51,7 +66,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
       const lines = linesFromWords(result.words) || result.text;
       setText(lines);
       setProvider(result.provider);
-      setParsed(await withCatalog(parseReceiptText(lines)));
+      setParsed(await enrich(parseReceiptText(lines)));
     } catch (e) {
       setError(e);
     } finally {
@@ -77,7 +92,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
             <textarea rows={8} value={text} placeholder="貼上單據文字"
               onChange={(e) => { setText(e.target.value); setParsed(null); }} />
             <div className="row gap end">
-              <button type="button" className="secondary" onClick={async () => setParsed(await withCatalog(parseReceiptText(text)))} disabled={!text.trim()}>解析</button>
+              <button type="button" className="secondary" onClick={async () => setParsed(await enrich(parseReceiptText(text)))} disabled={!text.trim()}>解析</button>
             </div>
           </div>
         </details>

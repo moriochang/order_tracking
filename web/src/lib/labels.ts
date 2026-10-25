@@ -116,6 +116,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   OCR_PROVIDER_ERROR: '辨識服務暫時無法使用，請稍後再試，或改用手動輸入。',
   OCR_TIMEOUT: '辨識逾時，請重新拍照或改用手動輸入。',
   IMAGE_TOO_LARGE: '照片太大，請重新拍照。',
+  DUPLICATE: '資料重複，例如預結號碼開頭已被其他門市使用。',
   NETWORK: '網路或伺服器錯誤，操作可能未完成，請重新載入確認。',
 };
 

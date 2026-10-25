@@ -16,7 +16,7 @@ export type Me = {
   stores: { code: string; name: string }[];
 };
 
-export type Store = { code: string; name: string; is_active: boolean };
+export type Store = { code: string; name: string; is_active: boolean; receipt_prefix?: string | null };
 
 export type Profile = {
   user_id: string;
