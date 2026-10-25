@@ -1,8 +1,8 @@
 // 從包裝盒標籤的辨識文字找出 SN。
-// SN 一般為 10–12 碼英數字，不會有英文字母 O、Z（一律視為數字 0、2）。
+// SN 一般為 10–12 碼英數字，不會有英文字母 O、I（一律視為數字 0、1）。
 // SN 就是標籤上「(S) Serial No.」後面的值；只取有這個標示的，不從其他代碼猜。
 
-export const normalizeSn = (s: string) => s.toUpperCase().replace(/\s/g, '').replace(/O/g, '0').replace(/Z/g, '2');
+export const normalizeSn = (s: string) => s.toUpperCase().replace(/\s/g, '').replace(/O/g, '0').replace(/I/g, '1');
 export const looksLikeSn = (s: string) => /^[A-Z0-9]{10,12}$/.test(s) && /[A-Z]/.test(s) && /\d/.test(s);
 
 // 容許常見辨識誤差：(S) 讀成 (5)、Serial 的 i／l 讀成 1

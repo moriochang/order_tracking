@@ -97,15 +97,15 @@ test('T105 繞過 API 直接改狀態仍被擋下', async (t) => {
   assert.equal(await expectError(asDbAdmin(db, `update devices set status = 'delivered' where id = $1`, [d.id])), 'ILLEGAL_TRANSITION');
 });
 
-test('T106 SN 選填（配件）；之後可補登；英文 O 視為數字 0', async (t) => {
+test('T106 SN 選填（配件）；之後可補登；英文 O、I 視為數字 0、1', async (t) => {
   const { db, devs } = await setup(2); t.after(() => db.close());
   let [a, b] = await devs();
   await call(db, 'staffA', 'register_arrival($1, $2, $3)', [a.id, a.version, '  ']);
   [a] = await devs();
   assert.deepEqual([a.status, a.sn], ['arrived_pending_notify', null]);
   assert.equal(await expectError(call(db, 'staffA', 'correct_sn($1, $2, $3, null)', [a.id, a.version, 'X'])), 'REASON_REQUIRED');
-  await call(db, 'staffA', 'correct_sn($1, $2, $3, $4)', [a.id, a.version, 'cO2nqcc6fy17', '到貨時漏登']);
-  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [b.id, b.version, 'GFMZJJNLZF']);
+  await call(db, 'staffA', 'correct_sn($1, $2, $3, $4)', [a.id, a.version, 'cO2nqcc6fyI7', '到貨時漏登']);
+  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [b.id, b.version, 'GFM2JJNLZF']);
   [a, b] = await devs();
-  assert.deepEqual([a.sn, b.sn], ['C02NQCC6FY17', 'GFM2JJNL2F']);
+  assert.deepEqual([a.sn, b.sn], ['C02NQCC6FY17', 'GFM2JJNLZF']);
 });
