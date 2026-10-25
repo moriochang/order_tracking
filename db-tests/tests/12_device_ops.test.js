@@ -78,17 +78,17 @@ test('T104 更正 SN 需原因；管理者更正狀態退回一格（同仁不�
   [d] = await devs();
   await call(db, 'staffA', 'set_labeled($1, $2, true)', [d.id, d.version]);
   [d] = await devs();
-  assert.equal(await expectError(call(db, 'staffA', 'correct_sn($1, $2, $3, null)', [d.id, d.version, 'RIGHT'])), 'REASON_REQUIRED');
-  await call(db, 'staffA', 'correct_sn($1, $2, $3, $4)', [d.id, d.version, 'RIGHT', '輸入錯誤']);
+  assert.equal(await expectError(call(db, 'staffA', 'correct_sn($1, $2, $3, null)', [d.id, d.version, 'CW93FPXM56'])), 'REASON_REQUIRED');
+  await call(db, 'staffA', 'correct_sn($1, $2, $3, $4)', [d.id, d.version, 'CW93FPXM56', '輸入錯誤']);
   [d] = await devs();
-  assert.equal(d.sn, 'RIGHT');
+  assert.equal(d.sn, 'CW93FPXM56');
 
   assert.equal(await expectError(call(db, 'staffA', 'correct_device_status($1, $2, $3)', [d.id, d.version, '登記錯台'])), 'FORBIDDEN');
   await call(db, 'managerA', 'correct_device_status($1, $2, $3)', [d.id, d.version, '登記錯台']);
   [d] = await devs();
   assert.deepEqual([d.status, d.sn, d.is_labeled], ['pending_arrival', null, false]);
   // SN 釋出後可以登記在其他機器
-  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, 'RIGHT']);
+  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, 'CW93FPXM56']);
 });
 
 test('T105 繞過 API 直接改狀態仍被擋下', async (t) => {
