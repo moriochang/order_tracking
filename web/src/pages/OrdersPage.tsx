@@ -46,7 +46,7 @@ export function OrdersPage() {
       {byModel ? (
         <>
           <label className="radio small">
-            <input type="checkbox" checked={all} onChange={(e) => setParam('all', e.target.checked ? '1' : '')} />也列出已全部到貨的訂單
+            <input type="checkbox" checked={all} onChange={(e) => setParam('all', e.target.checked ? '1' : '')} />顯示全部（含已到貨）
           </label>
           <ErrorBanner error={backlog.error} />
           {backlog.loading && <div className="muted">載入中…</div>}
