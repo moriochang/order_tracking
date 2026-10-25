@@ -64,7 +64,6 @@ export function NewOrderPage() {
   ];
 
   const deviceTotal = items.reduce((s, i) => s + i.devices.length, 0);
-  const excludedTotal = items.reduce((s, i) => s + i.devices.filter((d) => d.initial_status === 'excluded').length, 0);
 
   function saveEditing() {
     if (!editing || draftItemProblems(editing).length) return;
@@ -250,9 +249,26 @@ export function NewOrderPage() {
           <dl>
             <dt>顧客</dt><dd>{h.customer_name || '—'}</dd>
             <dt>單據日期</dt><dd>{fmtDate(h.purchase_date)}</dd>
-            <dt>預結號碼／序號</dt><dd>{h.receipt_no || (h.register_no || h.receipt_seq ? `機 ${h.register_no}／序 ${h.receipt_seq}` : '—')}</dd>
-            <dt>商品明細</dt><dd>{items.length} 項</dd>
-            <dt>單機總數</dt><dd>{deviceTotal} 台{excludedTotal ? `（已取走 ${excludedTotal}）` : ''}</dd>
+            <dt>預結號碼</dt><dd>{h.receipt_no || '—'}</dd>
+            <dt>機號</dt><dd>{h.register_no || '—'}</dd>
+            <dt>序號</dt><dd>{h.receipt_seq || '—'}</dd>
+          </dl>
+          <div className="stack tight">
+            <div className="muted">商品明細（{items.length} 項）</div>
+            {items.length === 0 ? <div className="small muted">尚未加入商品。</div> : (
+              <ul className="plain stack tight">
+                {items.map((it, idx) => (
+                  <li key={it.key}>
+                    <div className="product-name">{idx + 1}. {it.full_product_name || '（品名未辨識）'}</div>
+                    <div className="small muted">
+                      {[it.barcode && `條碼 ${it.barcode}`, it.model].filter(Boolean).join('・')} × {it.devices.length} 台
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <dl>
             <dt>訂單備註</dt><dd className="clip">{h.order_note || '—'}</dd>
           </dl>
           {showErrors && problems.length > 0 && (
