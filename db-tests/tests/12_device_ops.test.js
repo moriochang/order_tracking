@@ -105,7 +105,7 @@ test('T106 SN 選填（配件）；之後可補登；英文 O 視為數字 0', a
   assert.deepEqual([a.status, a.sn], ['arrived_pending_notify', null]);
   assert.equal(await expectError(call(db, 'staffA', 'correct_sn($1, $2, $3, null)', [a.id, a.version, 'X'])), 'REASON_REQUIRED');
   await call(db, 'staffA', 'correct_sn($1, $2, $3, $4)', [a.id, a.version, 'cO2nqcc6fy17', '到貨時漏登']);
-  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [b.id, b.version, 'CW93FPXM56']);
+  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [b.id, b.version, 'GFMZJJNLZF']);
   [a, b] = await devs();
-  assert.deepEqual([a.sn, b.sn], ['C02NQCC6FY17', 'CW93FPXM56']);
+  assert.deepEqual([a.sn, b.sn], ['C02NQCC6FY17', 'GFM2JJNL2F']);
 });

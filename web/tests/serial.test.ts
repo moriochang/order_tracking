@@ -20,6 +20,7 @@ Model No: A1419`), ['C02NQCC6FY17']);
 test('標題與值分兩行；英文 O 改為 0', () => {
   assert.deepEqual(extractSerials('(S) Serial No.\nCO2NQCC6FY17\nModel No. A1419'), ['C02NQCC6FY17']);
   assert.equal(normalizeSn(' cw93 fpxm56 '), 'CW93FPXM56');
+  assert.equal(normalizeSn('GFMZJJNLZF'), 'GFM2JJNL2F');
 });
 
 test('照片裡有兩張標籤（另一張被切掉一半）；常見辨識誤差', () => {
