@@ -1,0 +1,11 @@
+# Supabase CLI 設定（只列出本專案需要的部分）
+project_id = "order-tracking"
+
+[auth.third_party.firebase]
+enabled = true
+# 部署時改成你的 Firebase 專案 ID
+project_id = "YOUR_FIREBASE_PROJECT_ID"
+
+[functions.admin-users]
+# Firebase token 由函式內部透過 PostgREST（get_me）驗證，閘道不另外驗證
+verify_jwt = false

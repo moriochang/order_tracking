@@ -1,0 +1,15 @@
+# 內部規格不公開（見 docs/design-phase1.md 決策紀錄）
+docs/requirements.md
+
+# 機密：絕不可 commit
+.env
+.env.*
+!.env.example
+*service-account*.json
+*firebase-adminsdk*.json
+supabase/.temp/
+supabase/functions/.env
+
+node_modules/
+dist/
+.DS_Store

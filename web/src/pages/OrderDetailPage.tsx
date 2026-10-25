@@ -1,0 +1,209 @@
+import { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { listProfiles, loadOrder, rpc } from '../lib/api';
+import { fmtDate, fmtDateTime } from '../lib/format';
+import { ORDER_STATUS_LABEL } from '../lib/labels';
+import type { Device, OrderItem } from '../lib/types';
+import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
+import { AuditTimeline } from '../components/AuditTimeline';
+import { AddItemDialog, ChangeQtyDialog, EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
+import { OrderProgress } from './OrdersPage';
+
+type Modal =
+  | { kind: 'edit_order' }
+  | { kind: 'cancel_order' }
+  | { kind: 'add_item' }
+  | { kind: 'edit_item'; item: OrderItem }
+  | { kind: 'qty'; item: OrderItem }
+  | { kind: 'cancel_item'; item: OrderItem }
+  | { kind: 'cancel_device'; device: Device; item: OrderItem };
+
+// 第二階段才開放的單機作業，先顯示下一步要做什麼
+const NEXT_STEP: Partial<Record<Device['status'], string>> = {
+  pending_arrival: '登記到貨',
+  arrived_pending_notify: '通知顧客',
+  notified_pending_pickup: '完成交付',
+};
+
+export function OrderDetailPage() {
+  const { orderId = '' } = useParams();
+  const data = useAsync(() => loadOrder(orderId), [orderId]);
+  const profiles = useAsync(listProfiles, []);
+  const [modal, setModal] = useState<Modal | null>(null);
+  const [deviceFilter, setDeviceFilter] = useState<string | null>(null);
+  const names = useMemo(() => new Map((profiles.data ?? []).map((p) => [p.user_id, p.display_name])), [profiles.data]);
+
+  if (data.loading && !data.data) return <div className="muted">載入中…</div>;
+  if (data.error) return <ErrorBanner error={data.error} />;
+  const d = data.data;
+  if (!d?.summary) return <div className="card">找不到這張訂單，或你沒有查看權限。<Link to="/orders">回訂單查詢</Link></div>;
+
+  const o = d.summary;
+  const active = o.order_status !== 'cancelled';
+  const close = () => setModal(null);
+  const reload = data.reload;
+  const itemById = new Map(d.items.map((i) => [i.id, i]));
+  const deliveredOf = (itemId: string) => d.devices.filter((x) => x.order_item_id === itemId && x.status === 'delivered').length;
+  const lastSuccess = (deviceId: string) => d.notifications.find((n) => n.device_id === deviceId && n.is_success);
+
+  return (
+    <div className="stack">
+      <div className="row between wrap">
+        <div>
+          <h1>{o.order_no}</h1>
+          <div className="muted small">{o.store_code}・建立於 {fmtDateTime(o.created_at)}・{names.get(o.created_by) ?? ''}</div>
+        </div>
+        <div className="row gap">
+          <span className={`badge order-${o.order_status}`}>{ORDER_STATUS_LABEL[o.order_status]}</span>
+          <button className="secondary" onClick={reload}>重新載入</button>
+        </div>
+      </div>
+
+      {o.cancelled_at && <div className="alert error">此訂單已於 {fmtDateTime(o.cancelled_at)} 取消。原因：{o.cancellation_reason}</div>}
+
+      {/* 1. 訂單基本資料與備註 */}
+      <section className="card stack">
+        <div className="row between">
+          <h2>訂單資料</h2>
+          {active && (
+            <div className="row gap">
+              <button className="secondary" onClick={() => setModal({ kind: 'edit_order' })}>修改</button>
+              <button className="danger" onClick={() => setModal({ kind: 'cancel_order' })}>取消訂單</button>
+            </div>
+          )}
+        </div>
+        <dl className="grid-dl">
+          <dt>顧客</dt><dd>{o.customer_name}</dd>
+          <dt>電話</dt><dd>{o.customer_phone}</dd>
+          <dt>結帳日期</dt><dd>{fmtDate(o.purchase_date)}</dd>
+          <dt>收銀機號／序號</dt><dd>{o.register_no}／{o.receipt_seq}</dd>
+          <dt>預結號碼</dt><dd>{o.receipt_no ?? '—'}</dd>
+          <dt>進度</dt><dd><OrderProgress o={o} /></dd>
+          <dt>訂單備註</dt><dd className="prewrap">{o.order_note ?? '—'}</dd>
+        </dl>
+      </section>
+
+      {/* 2. 商品明細 */}
+      <section className="card stack">
+        <div className="row between">
+          <h2>商品明細</h2>
+          {active && <button className="secondary" onClick={() => setModal({ kind: 'add_item' })}>＋ 新增商品</button>}
+        </div>
+        {d.items.map((it) => (
+          <div key={it.id} className={`draft-item ${it.cancelled_at ? 'dim' : ''}`}>
+            <div className="grow">
+              <div className="product-name">{it.line_no}. {it.full_product_name}</div>
+              <div className="small muted">
+                {[it.barcode && `條碼 ${it.barcode}`, it.model].filter(Boolean).join('・')}
+                {' '}訂購 {it.ordered_qty} 台・已交付 {deliveredOf(it.id)} 台
+                {it.source === 'ocr' && '・掃描匯入'}
+              </div>
+              {it.item_note && <div className="small">備註：{it.item_note}</div>}
+              {it.cancelled_at && <div className="small danger-text">已取消：{it.cancellation_reason}</div>}
+            </div>
+            {active && !it.cancelled_at && (
+              <div className="row gap wrap">
+                <button className="link" onClick={() => setModal({ kind: 'edit_item', item: it })}>修改</button>
+                <button className="link" onClick={() => setModal({ kind: 'qty', item: it })}>修改數量</button>
+                <button className="link danger-text" onClick={() => setModal({ kind: 'cancel_item', item: it })}>取消</button>
+              </div>
+            )}
+          </div>
+        ))}
+        {d.scans.map((s) => (
+          <details key={s.id} className="small">
+            <summary>掃描原文（{fmtDateTime(s.created_at)}）</summary>
+            <pre className="scan-text">{s.raw_text}</pre>
+          </details>
+        ))}
+      </section>
+
+      {/* 3. 單機狀態 */}
+      <section className="card stack">
+        <h2>單機（共 {o.device_total} 台{o.cancelled ? `，另有已取消 ${o.cancelled} 台` : ''}）</h2>
+        <div className="table-wrap">
+          <table className="list devices">
+            <thead>
+              <tr><th>單機</th><th>商品</th><th>SN</th><th>狀態</th><th>已通知</th><th>已貼</th><th>到貨</th><th>交付</th><th>下一步</th><th></th></tr>
+            </thead>
+            <tbody>
+              {d.devices
+                .slice()
+                .sort((a, b) => (itemById.get(a.order_item_id)!.line_no - itemById.get(b.order_item_id)!.line_no) || a.unit_no - b.unit_no)
+                .map((dev) => {
+                  const it = itemById.get(dev.order_item_id)!;
+                  const notified = lastSuccess(dev.id);
+                  return (
+                    <tr key={dev.id} className={dev.status === 'cancelled' ? 'dim' : ''}>
+                      <td data-label="單機">{it.line_no}-{dev.unit_no}</td>
+                      <td data-label="商品" className="product-name">{it.full_product_name}</td>
+                      <td data-label="SN">{dev.sn ?? <span className="muted">尚未登記</span>}</td>
+                      <td data-label="狀態">
+                        <StatusBadge status={dev.status} />
+                        {dev.exclusion_reason && dev.status === 'excluded' && <div className="small muted">{dev.exclusion_reason}</div>}
+                        {dev.status === 'cancelled' && <div className="small muted">{dev.cancellation_reason}</div>}
+                      </td>
+                      <td data-label="已通知">{notified ? fmtDateTime(notified.notified_at) : '—'}</td>
+                      <td data-label="已貼">{dev.is_labeled ? '是' : '否'}</td>
+                      <td data-label="到貨">{fmtDateTime(dev.arrived_at)}</td>
+                      <td data-label="交付">{fmtDateTime(dev.delivered_at)}</td>
+                      <td data-label="下一步">
+                        {NEXT_STEP[dev.status]
+                          ? <button className="secondary small-btn" disabled title="第二階段開放">{NEXT_STEP[dev.status]}</button>
+                          : '—'}
+                      </td>
+                      <td data-label="">
+                        <div className="row gap">
+                          <button className="link" onClick={() => { setDeviceFilter(dev.id); document.getElementById('audit')?.scrollIntoView({ behavior: 'smooth' }); }}>歷史</button>
+                          {active && !['delivered', 'cancelled'].includes(dev.status) && (
+                            <button className="link danger-text" onClick={() => setModal({ kind: 'cancel_device', device: dev, item: it })}>取消</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+        <p className="small muted">登記到貨／SN、通知顧客、已貼、完成交付為第二階段功能，目前按鈕尚未開放。</p>
+      </section>
+
+      {/* 4. 通知紀錄 */}
+      <section className="card stack">
+        <h2>通知紀錄</h2>
+        {d.notifications.length === 0 ? <p className="muted">尚無通知紀錄（通知功能於第二階段開放）。</p> : (
+          <ul className="plain">
+            {d.notifications.map((n) => <li key={n.id}>{fmtDateTime(n.notified_at)}・{names.get(n.operator_id)}・{n.method}・{n.outcome}{n.note ? `・${n.note}` : ''}</li>)}
+          </ul>
+        )}
+      </section>
+
+      {/* 5. 異動紀錄 */}
+      <section className="card stack" id="audit">
+        <h2>異動紀錄</h2>
+        <AuditTimeline logs={d.audit} items={d.items} devices={d.devices} deviceFilter={deviceFilter} onClearDevice={() => setDeviceFilter(null)} />
+      </section>
+
+      {modal?.kind === 'edit_order' && <EditOrderDialog order={o} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'qty' && <ChangeQtyDialog item={modal.item} devices={d.devices} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'cancel_order' && (
+        <ReasonDialog title="取消整張訂單" danger confirmLabel="確認取消訂單" onClose={close}
+          description={<p>將取消此訂單所有尚未交付的 {o.device_total} 台機器。已交付的機器存在時無法整筆取消。紀錄會保留，不會刪除。</p>}
+          onConfirm={async (reason) => { await rpc('cancel_order', { p_order_id: o.id, p_expected_version: o.version, p_reason: reason }); reload(); }} />
+      )}
+      {modal?.kind === 'cancel_item' && (
+        <ReasonDialog title={`取消商品 ${modal.item.line_no}`} danger confirmLabel="確認取消商品" onClose={close}
+          description={<p className="product-name">{modal.item.full_product_name} × {modal.item.ordered_qty} 台</p>}
+          onConfirm={async (reason) => { await rpc('cancel_order_item', { p_item_id: modal.item.id, p_expected_version: modal.item.version, p_reason: reason }); reload(); }} />
+      )}
+      {modal?.kind === 'cancel_device' && (
+        <ReasonDialog title={`取消單機 ${modal.item.line_no}-${modal.device.unit_no}`} danger confirmLabel="確認取消這台" onClose={close}
+          description={<p>{modal.item.full_product_name}。取消後此商品數量減 1；若是最後一台，商品（及訂單）會一併取消。</p>}
+          onConfirm={async (reason) => { await rpc('cancel_device', { p_device_id: modal.device.id, p_expected_version: modal.device.version, p_reason: reason }); reload(); }} />
+      )}
+    </div>
+  );
+}

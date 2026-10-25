@@ -1,0 +1,11 @@
+{
+  "name": "db-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 --test-force-exit tests/"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11"
+  }
+}
