@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
 import { searchBacklog, searchOrders } from '../lib/api';
-import { fmtDate, receiptLabel } from '../lib/format';
+import { fmtDate } from '../lib/format';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
 import type { BacklogRow, OrderSummary } from '../lib/types';
 import { ErrorBanner, useAsync } from '../components/ui';
@@ -104,7 +104,7 @@ export function OrderTable({ orders }: { orders: OrderSummary[] }) {
       <table className="list">
         <thead>
           <tr>
-            <th>訂單編號</th><th>顧客</th><th>電話</th><th>結帳日期</th><th>預結號碼／序號</th>
+            <th>訂單編號</th><th>顧客</th><th>電話</th><th>結帳日期</th><th>機號</th><th>序號</th><th>預結號碼</th>
             <th>商品／台數</th><th>進度</th><th>備註</th>
           </tr>
         </thead>
@@ -115,7 +115,9 @@ export function OrderTable({ orders }: { orders: OrderSummary[] }) {
               <td data-label="顧客">{o.customer_name}</td>
               <td data-label="電話">{o.customer_phone}</td>
               <td data-label="結帳日期">{fmtDate(o.purchase_date)}</td>
-              <td data-label="預結號碼／序號">{receiptLabel(o)}</td>
+              <td data-label="機號">{o.register_no}</td>
+              <td data-label="序號">{o.receipt_seq}</td>
+              <td data-label="預結號碼">{o.receipt_no ?? '—'}</td>
               <td data-label="商品／台數">{o.item_count} 項／{o.device_total} 台</td>
               <td data-label="進度"><OrderProgress o={o} /></td>
               <td data-label="備註" className="clip">{o.order_note ?? ''}</td>

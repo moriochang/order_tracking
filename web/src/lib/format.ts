@@ -15,10 +15,6 @@ export function todayTaipei(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
 }
 
-export function receiptLabel(o: { receipt_no: string | null; register_no: string; receipt_seq: string }): string {
-  return o.receipt_no ?? `機 ${o.register_no}／序 ${o.receipt_seq}`;
-}
-
 // 國際條碼（GTIN-8/12/13/14）檢查碼；與資料庫 app.is_valid_gtin 規則相同
 export function isValidGtin(code: string): boolean {
   if (!/^(\d{8}|\d{12,14})$/.test(code)) return false;
