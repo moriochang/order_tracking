@@ -10,6 +10,13 @@ export const STATUS_LABEL: Record<DeviceStatus, string> = {
   cancelled: '已取消',
 };
 
+export const METHOD_LABEL: Record<string, string> = {
+  phone: '電話', sms: '簡訊', messaging_app: '通訊軟體', in_person: '顧客到店', other: '其他',
+};
+export const OUTCOME_LABEL: Record<string, string> = {
+  contacted: '已聯絡', message_sent: '訊息已送出', no_answer: '無人接聽', not_reached: '未聯絡成功',
+};
+
 export const ORDER_STATUS_LABEL = { in_progress: '進行中', completed: '已完成', cancelled: '已取消' } as const;
 
 export const ROLE_LABEL: Record<Role, string> = { staff: '門市同仁', manager: '門市主管', admin: '總部管理者' };
@@ -35,6 +42,7 @@ export const ACTION_LABEL: Record<string, string> = {
   bootstrap_admin: '建立第一位管理者',
   system_migration: '系統調整',
   admin_import_catalog: '匯入產品資料',
+  update_device_note: '單機備註',
   direct_db_change: '⚠ 未經系統流程的資料庫修改',
 };
 
@@ -55,6 +63,8 @@ export const FIELD_LABEL: Record<string, string> = {
   color: '顏色／規格',
   ordered_qty: '數量',
   item_note: '商品備註',
+  note: '單機備註',
+  delivery_note: '交付備註',
   sn: 'SN',
   status: '狀態',
   is_labeled: '已貼',
@@ -74,7 +84,7 @@ export const FIELD_LABEL: Record<string, string> = {
 export const AUDIT_FILTERS: { key: string; label: string; actions: string[] }[] = [
   { key: 'all', label: '全部異動', actions: [] },
   { key: 'order', label: '訂單資料', actions: ['create_order', 'update_order_info'] },
-  { key: 'item', label: '商品／SN', actions: ['add_order_item', 'update_order_item', 'change_item_quantity', 'correct_sn'] },
+  { key: 'item', label: '商品／SN', actions: ['add_order_item', 'update_order_item', 'change_item_quantity', 'correct_sn', 'update_device_note'] },
   { key: 'arrival', label: '到貨', actions: ['register_arrival'] },
   { key: 'notify', label: '通知', actions: ['record_notification'] },
   { key: 'label', label: '貼標', actions: ['set_labeled'] },
@@ -117,6 +127,8 @@ const ERROR_MESSAGE: Record<string, string> = {
   OCR_TIMEOUT: '辨識逾時，請重新拍照或改用手動輸入。',
   IMAGE_TOO_LARGE: '照片太大，請重新拍照。',
   DUPLICATE: '資料重複，例如預結號碼開頭已被其他門市使用。',
+  SN_REQUIRED: '請輸入 SN。',
+  LABEL_NOT_ALLOWED: '只有已到貨、尚未交付的機器可以標記已貼。',
   NETWORK: '網路或伺服器錯誤，操作可能未完成，請重新載入確認。',
 };
 

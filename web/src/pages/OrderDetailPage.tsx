@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
+import { useMe } from '../auth/AuthProvider';
 import { Link, useParams } from 'react-router-dom';
 import { listProfiles, loadOrder, rpc } from '../lib/api';
 import { fmtDate, fmtDateTime } from '../lib/format';
-import { ORDER_STATUS_LABEL } from '../lib/labels';
+import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL } from '../lib/labels';
 import type { Device, OrderItem } from '../lib/types';
 import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
 import { AuditTimeline } from '../components/AuditTimeline';
 import { AddItemDialog, ChangeQtyDialog, EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
 import { OrderProgress } from './OrdersPage';
+import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, DeviceNoteDialog, NotifyDialog } from '../components/DeviceDialogs';
 
 type Modal =
   | { kind: 'edit_order' }
@@ -16,13 +18,15 @@ type Modal =
   | { kind: 'edit_item'; item: OrderItem }
   | { kind: 'qty'; item: OrderItem }
   | { kind: 'cancel_item'; item: OrderItem }
-  | { kind: 'cancel_device'; device: Device; item: OrderItem };
+  | { kind: 'cancel_device'; device: Device; item: OrderItem }
+  | { kind: 'arrival' | 'notify' | 'deliver' | 'note' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
 
-// 第二階段才開放的單機作業，先顯示下一步要做什麼
-const NEXT_STEP: Partial<Record<Device['status'], string>> = {
-  pending_arrival: '登記到貨',
-  arrived_pending_notify: '通知顧客',
-  notified_pending_pickup: '完成交付',
+// 管理者更正狀態：只能退回一格
+const CORRECT_TO: Partial<Record<Device['status'], Device['status']>> = {
+  delivered: 'notified_pending_pickup',
+  notified_pending_pickup: 'arrived_pending_notify',
+  arrived_pending_notify: 'pending_arrival',
+  excluded: 'pending_arrival',
 };
 
 export function OrderDetailPage() {
@@ -31,6 +35,8 @@ export function OrderDetailPage() {
   const profiles = useAsync(listProfiles, []);
   const [modal, setModal] = useState<Modal | null>(null);
   const [deviceFilter, setDeviceFilter] = useState<string | null>(null);
+  const [opError, setOpError] = useState<unknown>(null);
+  const me = useMe();
   const names = useMemo(() => new Map((profiles.data ?? []).map((p) => [p.user_id, p.display_name])), [profiles.data]);
 
   if (data.loading && !data.data) return <div className="muted">載入中…</div>;
@@ -45,6 +51,18 @@ export function OrderDetailPage() {
   const itemById = new Map(d.items.map((i) => [i.id, i]));
   const deliveredOf = (itemId: string) => d.devices.filter((x) => x.order_item_id === itemId && x.status === 'delivered').length;
   const lastSuccess = (deviceId: string) => d.notifications.find((n) => n.device_id === deviceId && n.is_success);
+  const unitName = (dev: Device) => { const it = itemById.get(dev.order_item_id)!; return `${it.line_no}-${dev.unit_no} ${it.full_product_name}${dev.sn ? `（${dev.sn}）` : ''}`; };
+  const isManager = me.role === 'manager' || me.role === 'admin';
+
+  async function toggleLabeled(dev: Device) {
+    setOpError(null);
+    try {
+      await rpc('set_labeled', { p_device_id: dev.id, p_expected_version: dev.version, p_labeled: !dev.is_labeled });
+      reload();
+    } catch (e) {
+      setOpError(e);
+    }
+  }
 
   return (
     <div className="stack">
@@ -136,25 +154,56 @@ export function OrderDetailPage() {
                   return (
                     <tr key={dev.id} className={dev.status === 'cancelled' ? 'dim' : ''}>
                       <td data-label="單機">{it.line_no}-{dev.unit_no}</td>
-                      <td data-label="商品" className="product-name">{it.full_product_name}</td>
-                      <td data-label="SN">{dev.sn ?? <span className="muted">尚未登記</span>}</td>
+                      <td data-label="商品">
+                        <span className="product-name">{it.full_product_name}</span>
+                        {dev.note && <div className="small">備註：{dev.note}</div>}
+                        {dev.delivery_note && <div className="small muted">交付：{dev.delivery_note}</div>}
+                      </td>
+                      <td data-label="SN">
+                        {dev.sn ?? <span className="muted">尚未登記</span>}
+                        {active && dev.sn && dev.status !== 'cancelled' && (
+                          <button className="link small" onClick={() => setModal({ kind: 'sn', device: dev, item: it })}>更正</button>
+                        )}
+                      </td>
                       <td data-label="狀態">
                         <StatusBadge status={dev.status} />
                         {dev.exclusion_reason && dev.status === 'excluded' && <div className="small muted">{dev.exclusion_reason}</div>}
                         {dev.status === 'cancelled' && <div className="small muted">{dev.cancellation_reason}</div>}
                       </td>
                       <td data-label="已通知">{notified ? fmtDateTime(notified.notified_at) : '—'}</td>
-                      <td data-label="已貼">{dev.is_labeled ? '是' : '否'}</td>
+                      <td data-label="已貼">
+                        {active && ['arrived_pending_notify', 'notified_pending_pickup'].includes(dev.status)
+                          ? <label className="radio"><input type="checkbox" checked={dev.is_labeled} onChange={() => toggleLabeled(dev)} />{dev.is_labeled ? '是' : '否'}</label>
+                          : dev.is_labeled ? '是' : '否'}
+                      </td>
                       <td data-label="到貨">{fmtDateTime(dev.arrived_at)}</td>
                       <td data-label="交付">{fmtDateTime(dev.delivered_at)}</td>
                       <td data-label="下一步">
-                        {NEXT_STEP[dev.status]
-                          ? <button className="secondary small-btn" disabled title="第二階段開放">{NEXT_STEP[dev.status]}</button>
+                        {!active ? '—'
+                          : dev.status === 'pending_arrival' ? <button className="small-btn" onClick={() => setModal({ kind: 'arrival', device: dev, item: it })}>登記到貨</button>
+                          : dev.status === 'arrived_pending_notify' ? (
+                            <div className="row gap wrap">
+                              <button className="small-btn" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>通知顧客</button>
+                              <button className="link small" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>直接交付</button>
+                            </div>
+                          )
+                          : dev.status === 'notified_pending_pickup' ? (
+                            <div className="row gap wrap">
+                              <button className="small-btn" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成交付</button>
+                              <button className="link small" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>再次通知</button>
+                            </div>
+                          )
                           : '—'}
                       </td>
                       <td data-label="">
                         <div className="row gap">
                           <button className="link" onClick={() => { setDeviceFilter(dev.id); document.getElementById('audit')?.scrollIntoView({ behavior: 'smooth' }); }}>歷史</button>
+                          {active && dev.status !== 'cancelled' && (
+                            <button className="link" onClick={() => setModal({ kind: 'note', device: dev, item: it })}>備註</button>
+                          )}
+                          {active && isManager && CORRECT_TO[dev.status] && (
+                            <button className="link" onClick={() => setModal({ kind: 'correct_status', device: dev, item: it })}>更正狀態</button>
+                          )}
                           {active && !['delivered', 'cancelled'].includes(dev.status) && (
                             <button className="link danger-text" onClick={() => setModal({ kind: 'cancel_device', device: dev, item: it })}>取消</button>
                           )}
@@ -166,15 +215,25 @@ export function OrderDetailPage() {
             </tbody>
           </table>
         </div>
-        <p className="small muted">登記到貨／SN、通知顧客、已貼、完成交付為第二階段功能，目前按鈕尚未開放。</p>
+        <ErrorBanner error={opError} />
+        <p className="small muted">「已貼」只有已到貨、尚未交付的機器可以勾選。客人在通知前到店，可直接按「直接交付」。</p>
       </section>
 
       {/* 4. 通知紀錄 */}
       <section className="card stack">
         <h2>通知紀錄</h2>
-        {d.notifications.length === 0 ? <p className="muted">尚無通知紀錄（通知功能於第二階段開放）。</p> : (
+        {d.notifications.length === 0 ? <p className="muted">尚無通知紀錄。</p> : (
           <ul className="plain">
-            {d.notifications.map((n) => <li key={n.id}>{fmtDateTime(n.notified_at)}・{names.get(n.operator_id)}・{n.method}・{n.outcome}{n.note ? `・${n.note}` : ''}</li>)}
+            {d.notifications.map((n) => {
+              const dev = d.devices.find((x) => x.id === n.device_id);
+              return (
+                <li key={n.id}>
+                  {fmtDateTime(n.notified_at)}・{names.get(n.operator_id)}・{METHOD_LABEL[n.method] ?? n.method}・{OUTCOME_LABEL[n.outcome] ?? n.outcome}
+                  {dev && <span className="small muted">・{unitName(dev)}</span>}
+                  {n.note ? `・${n.note}` : ''}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -186,6 +245,22 @@ export function OrderDetailPage() {
       </section>
 
       {modal?.kind === 'edit_order' && <EditOrderDialog order={o} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'note' && <DeviceNoteDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'notify' && (
+        <NotifyDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload}
+          others={d.devices
+            .filter((x) => x.id !== modal.device.id && ['arrived_pending_notify', 'notified_pending_pickup'].includes(x.status))
+            .map((x) => ({ device: x, label: `${unitName(x)}・${STATUS_LABEL[x.status]}` }))} />
+      )}
+      {modal?.kind === 'correct_status' && (
+        <ReasonDialog title="更正單機狀態" confirmLabel="確認更正" onClose={close}
+          description={<p>{unitName(modal.device)}：{STATUS_LABEL[modal.device.status]} → <strong>{STATUS_LABEL[CORRECT_TO[modal.device.status]!]}</strong>
+            {modal.device.status === 'arrived_pending_notify' && '（會清除 SN 與已貼）'}</p>}
+          onConfirm={async (reason) => { await rpc('correct_device_status', { p_device_id: modal.device.id, p_expected_version: modal.device.version, p_reason: reason }); reload(); }} />
+      )}
       {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} onClose={close} onSaved={reload} />}
       {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} onClose={close} onSaved={reload} />}
       {modal?.kind === 'qty' && <ChangeQtyDialog item={modal.item} devices={d.devices} onClose={close} onSaved={reload} />}

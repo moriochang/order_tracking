@@ -7,7 +7,7 @@ import type { Device, OrderItem, OrderSummary } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
 import { CatalogNameHint, ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem, useModelNameSuggest } from './ItemEditor';
 
-function useSubmit(onDone: () => void) {
+export function useSubmit(onDone: () => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   async function run(fn: () => Promise<unknown>) {

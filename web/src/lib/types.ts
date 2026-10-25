@@ -112,6 +112,8 @@ export type Device = {
   delivered_by: string | null;
   exclusion_reason: string | null;
   cancellation_reason: string | null;
+  delivery_note: string | null;
+  note: string | null;
   version: number;
 };
 
