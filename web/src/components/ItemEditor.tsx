@@ -1,6 +1,10 @@
-// 商品草稿編輯：完整商品名稱、國際條碼、型號、數量、備註，以及每台單機的初始狀態。
+// 商品草稿編輯：型號、國際條碼、數量、完整商品名稱、備註，以及每台單機的初始狀態。
+// 輸入型號後依產品資料帶入品名；同型號有多筆品名時讓同仁選擇。
+import { useEffect, useState } from 'react';
 import type { DraftDevice, DraftItem } from '../lib/types';
 import { isValidGtin } from '../lib/format';
+import { catalogByModels } from '../lib/api';
+import type { CatalogEntry } from '../lib/catalogMatch';
 
 export function emptyDraftItem(): DraftItem {
   return {
@@ -45,9 +49,42 @@ export function draftItemPayload(item: DraftItem) {
   };
 }
 
+// 依型號查產品資料（輸入停頓 300ms 後查詢）；null 表示尚未查詢或型號太短
+function useCatalogByModel(model: string) {
+  const key = model.trim().toUpperCase();
+  const [result, setResult] = useState<{ key: string; names: string[] } | null>(null);
+  useEffect(() => {
+    if (key.length < 4) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      catalogByModels([key])
+        .then((rows: CatalogEntry[]) => { if (!cancelled) setResult({ key, names: [...new Set(rows.map((r) => r.product_name))] }); })
+        .catch(() => { if (!cancelled) setResult(null); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [key]);
+  return result?.key === key ? result.names : null;
+}
+
 export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v: DraftItem) => void }) {
   const mode = modeOf(value.devices);
   const set = (patch: Partial<DraftItem>) => onChange({ ...value, ...patch });
+  const names = useCatalogByModel(value.model);
+  const [autoName, setAutoName] = useState('');   // 上次自動帶入的品名；同仁改過就不再覆蓋
+
+  // 只有一筆品名時自動帶入（品名空白，或仍是先前自動帶入的值）
+  useEffect(() => {
+    if (names?.length !== 1 || names[0] === value.full_product_name) return;
+    if (!value.full_product_name.trim() || value.full_product_name === autoName) {
+      setAutoName(names[0]);
+      onChange({ ...value, full_product_name: names[0] });
+    }
+  }, [names]);  // 只在查詢結果變動時執行
+
+  function pickName(name: string) {
+    setAutoName(name);
+    set({ full_product_name: name });
+  }
 
   function setQty(raw: string) {
     const qty = Math.max(1, Math.min(999, Math.floor(Number(raw) || 1)));
@@ -72,20 +109,33 @@ export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v
 
   return (
     <div className="stack">
-      <label>
-        完整商品名稱（必填，請依單據完整輸入）
-        <input value={value.full_product_name} placeholder="依單據上的完整品名輸入，不要只填型號"
-          onChange={(e) => set({ full_product_name: e.target.value })} />
-      </label>
       <div className="grid3">
+        <label>型號<input value={value.model} placeholder="例：MFYN4" autoCapitalize="characters"
+          onChange={(e) => set({ model: e.target.value.toUpperCase() })} /></label>
         <label>國際條碼（選填）<input inputMode="numeric" value={value.barcode} onChange={(e) => set({ barcode: e.target.value })} /></label>
-        <label>型號<input value={value.model} onChange={(e) => set({ model: e.target.value })} /></label>
         <label>
           數量（台）
           <input type="number" inputMode="numeric" min={1} max={999} value={value.devices.length}
             onChange={(e) => setQty(e.target.value)} />
         </label>
       </div>
+      <label>
+        完整商品名稱（必填，請依單據完整輸入）
+        <input value={value.full_product_name} placeholder="輸入型號會自動帶入；或依單據上的完整品名輸入"
+          onChange={(e) => set({ full_product_name: e.target.value })} />
+      </label>
+      {names && names.length === 0 && <div className="small muted">產品資料中沒有型號 {value.model.trim()}，請手動輸入品名。</div>}
+      {names && names.length === 1 && value.full_product_name === names[0] && <div className="small ok-text">✓ 已依產品資料帶入品名</div>}
+      {names && names.length > 1 && (
+        <div className="stack tight">
+          <div className="small">型號 {value.model.trim()} 有 {names.length} 筆品名，請依單據選擇：</div>
+          {names.map((n) => (
+            <label key={n} className="radio small">
+              <input type="radio" checked={value.full_product_name === n} onChange={() => pickName(n)} />{n}
+            </label>
+          ))}
+        </div>
+      )}
       <label>商品備註<input value={value.item_note} onChange={(e) => set({ item_note: e.target.value })} /></label>
 
       <fieldset>
