@@ -2,7 +2,7 @@
 import { supabase } from './clients';
 import type { OcrWord } from './ocrLayout';
 import type { CatalogEntry } from './catalogMatch';
-import type { AuditLog, Device, Me, Notification, OrderItem, OrderSummary, Profile, Store, UserStore } from './types';
+import type { AuditLog, BacklogRow, Device, Me, Notification, OrderItem, OrderSummary, Profile, Store, UserStore } from './types';
 
 export class ApiError extends Error {
   constructor(public code: string, public detail = '') {
@@ -42,6 +42,18 @@ export async function searchOrders(opts: { q?: string; storeCode?: string; limit
     query = query.or(parts.join(','));
   }
   return unwrap(await query) as OrderSummary[];
+}
+
+// 依型號（或品名）查商品明細與欠貨台數，依結帳日期由舊到新（先訂先到）
+export async function searchBacklog(opts: { q: string; storeCode?: string; onlyBacklog: boolean }) {
+  const q = opts.q.replace(/[,()*%\\]/g, ' ').trim();
+  if (!q) return [] as BacklogRow[];
+  let query = supabase.from('v_item_backlog').select('*')
+    .or(`model.ilike.*${q}*,full_product_name.ilike.*${q}*`)
+    .order('purchase_date').order('created_at').limit(500);
+  if (opts.storeCode) query = query.eq('store_code', opts.storeCode);
+  if (opts.onlyBacklog) query = query.gt('pending_arrival', 0);
+  return unwrap(await query) as BacklogRow[];
 }
 
 export async function loadOrder(orderId: string) {

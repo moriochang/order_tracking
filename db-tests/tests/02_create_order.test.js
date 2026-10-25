@@ -130,7 +130,7 @@ test('T16 收銀機號、序號、電話以文字保存，保留前導零', asyn
   });
   const [o] = await as(db, 'staffA', 'select register_no, receipt_seq, customer_phone from orders where id = $1', [order_id]);
   assert.deepEqual(o, { register_no: '011', receipt_seq: '0196', customer_phone: '0912345678' });
-  assert.match(order_no, /^PO-A01-\d{8}-0001$/);
+  assert.equal(order_no, 'A01-011-00196');
 });
 
 test('T17 必填欄位與格式驗證', async (t) => {

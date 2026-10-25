@@ -57,6 +57,28 @@ export type OrderSummary = {
   order_status: 'in_progress' | 'completed' | 'cancelled';
 };
 
+export type BacklogRow = {
+  item_id: string;
+  order_id: string;
+  order_no: string;
+  store_code: string;
+  customer_name: string;
+  customer_phone: string;
+  purchase_date: string;
+  register_no: string;
+  receipt_seq: string;
+  receipt_no: string | null;
+  full_product_name: string;
+  model: string | null;
+  barcode: string | null;
+  ordered_qty: number;
+  pending_arrival: number;
+  arrived_pending_notify: number;
+  notified_pending_pickup: number;
+  delivered: number;
+  excluded: number;
+};
+
 export type OrderItem = {
   id: string;
   order_id: string;
