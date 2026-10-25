@@ -47,8 +47,8 @@ MBN 13 8G 256GB 銀 MHFA4 0點
 test('iPad 單：單據欄位、重複列印合併、條碼', () => {
   const r = parseReceiptText(IPAD);
   assert.deepEqual(
-    [r.store_code, r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq],
-    ['TC', '75000001', '2026-09-24', '011', '101'],
+    [r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq],
+    ['75000001', '2026-09-24', '011', '101'],
   );
   assert.deepEqual(r.items.map((i) => [i.full_product_name, i.model, i.barcode, i.product_code, i.qty, i.merged_lines]), [
     ['iPad Air 11 WF 128 藍 MH314', 'MH314', '195950823844', '', 3, 3],

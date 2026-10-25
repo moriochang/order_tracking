@@ -17,7 +17,6 @@ export type ParsedItem = {
 };
 
 export type ParsedReceipt = {
-  store_code: string;
   receipt_no: string;
   purchase_date: string;  // YYYY-MM-DD
   register_no: string;
@@ -57,16 +56,12 @@ function parseNumbers(rest: string) {
 export function parseReceiptText(text: string): ParsedReceipt {
   const lines = normalize(text);
   const out: ParsedReceipt = {
-    store_code: '', receipt_no: '', purchase_date: '', register_no: '', receipt_seq: '',
+    receipt_no: '', purchase_date: '', register_no: '', receipt_seq: '',
     items: [], checks: [], warnings: [],
   };
 
   // ── 單據資料 ──
   const dateIdx = lines.findIndex((l) => /銷售日期/.test(l));
-  for (const l of lines) {
-    const m = l.match(/(?:^|\s)-\s*([A-Z]{2,5})\s*-\s*iStore/i) ?? l.match(/^-\s*([A-Z]{2,5})\s*-/);
-    if (m) { out.store_code = m[1].toUpperCase(); break; }
-  }
   // 上方條碼下的數字（*75000002*）；底部也有一條，只取銷售日期之前的
   const barcodeLines = lines
     .map((l, i) => ({ i, m: l.match(/^\*?\s*((?:\d\s*){6,14})\*?$/) }))

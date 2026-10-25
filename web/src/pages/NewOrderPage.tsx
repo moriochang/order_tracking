@@ -38,7 +38,8 @@ export function NewOrderPage() {
   const navigate = useNavigate();
   const [requestId] = useState(() => crypto.randomUUID());  // 同一份表單重送不會重複建立
   const [h, setH] = useState<Header>({
-    store_code: me.stores.length === 1 ? me.stores[0].code : '',
+    // 目前只有門市 75；有多家門市權限時仍預設 75
+    store_code: me.stores.length === 1 ? me.stores[0].code : me.stores.some((s) => s.code === '75') ? '75' : '',
     customer_name: '', customer_phone: '',
     purchase_date: todayTaipei(), register_no: '', receipt_seq: '', receipt_no: '', order_note: '',
   });
@@ -61,7 +62,7 @@ export function NewOrderPage() {
     ...(editing ? ['請先完成或取消正在編輯的商品'] : []),
     ...(unchecked ? [`有 ${unchecked} 項掃描商品需核對，請點「編輯」確認內容後儲存`] : []),
   ];
-  const scanStoreMismatch = scan?.parsed.store_code && !me.stores.some((s) => s.code === scan.parsed.store_code);
+
   const deviceTotal = items.reduce((s, i) => s + i.devices.length, 0);
   const excludedTotal = items.reduce((s, i) => s + i.devices.filter((d) => d.initial_status === 'excluded').length, 0);
 
@@ -79,7 +80,6 @@ export function NewOrderPage() {
     const p = r.parsed;
     setH((prev) => ({
       ...prev,
-      store_code: me.stores.some((s) => s.code === p.store_code) ? p.store_code : prev.store_code,
       purchase_date: p.purchase_date && p.purchase_date <= todayTaipei() ? p.purchase_date : prev.purchase_date,
       register_no: p.register_no || prev.register_no,
       receipt_seq: p.receipt_seq || prev.receipt_seq,
@@ -175,7 +175,6 @@ export function NewOrderPage() {
               <div className="alert info stack tight">
                 <div>已從掃描帶入單據資料，請逐欄與單據核對。顧客姓名與電話單據上沒有，請手動填寫。</div>
                 {scan.image_url && <a href={scan.image_url} target="_blank" rel="noreferrer"><img src={scan.image_url} alt="單據照片" className="scan-thumb" /></a>}
-                {scanStoreMismatch && <div className="warn-text">⚠ 單據門市代碼 {scan.parsed.store_code} 不是你所屬的門市，門市未自動帶入。</div>}
                 <ScanChecks parsed={scan.parsed} />
               </div>
             )}
