@@ -1,7 +1,6 @@
 // 商品草稿編輯：完整商品名稱、國際條碼、型號、數量、備註，以及每台單機的初始狀態。
 import type { DraftDevice, DraftItem } from '../lib/types';
 import { isValidGtin } from '../lib/format';
-import { BarcodeScanButton } from './BarcodeScan';
 
 export function emptyDraftItem(): DraftItem {
   return {
@@ -79,10 +78,7 @@ export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v
           onChange={(e) => set({ full_product_name: e.target.value })} />
       </label>
       <div className="grid3">
-        <label>
-          <span className="row between">國際條碼（選填）<BarcodeScanButton label="國際條碼" onResult={(t) => set({ barcode: t })} /></span>
-          <input inputMode="numeric" value={value.barcode} onChange={(e) => set({ barcode: e.target.value })} />
-        </label>
+        <label>國際條碼（選填）<input inputMode="numeric" value={value.barcode} onChange={(e) => set({ barcode: e.target.value })} /></label>
         <label>型號<input value={value.model} onChange={(e) => set({ model: e.target.value })} /></label>
         <label>
           數量（台）

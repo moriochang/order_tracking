@@ -7,7 +7,6 @@ import type { DraftItem } from '../lib/types';
 import { Dialog, ErrorBanner } from '../components/ui';
 import { ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem } from '../components/ItemEditor';
 import { ReceiptScanDialog, ScanChecks, type ScanResult } from '../components/ReceiptScan';
-import { BarcodeScanButton } from '../components/BarcodeScan';
 
 type Header = {
   store_code: string;
@@ -190,10 +189,7 @@ export function NewOrderPage() {
               </label>
               <label>收銀機號（必填）<input inputMode="numeric" placeholder="例：011" value={h.register_no} onChange={(e) => set({ register_no: e.target.value })} /></label>
               <label>序號（必填）<input inputMode="numeric" placeholder="例：196" value={h.receipt_seq} onChange={(e) => set({ receipt_seq: e.target.value })} /></label>
-              <label>
-                <span className="row between">預結號碼<BarcodeScanButton label="預結號碼" onResult={(t) => set({ receipt_no: t })} /></span>
-                <input value={h.receipt_no} onChange={(e) => set({ receipt_no: e.target.value })} />
-              </label>
+              <label>預結號碼<input value={h.receipt_no} onChange={(e) => set({ receipt_no: e.target.value })} /></label>
             </div>
             <label>訂單備註<textarea rows={2} value={h.order_note} onChange={(e) => set({ order_note: e.target.value })} /></label>
             <p className="muted small">序號是收據上的流水號，不是機器 SN；機器 SN 於到貨時登記。</p>
