@@ -13,6 +13,7 @@ export type ParsedItem = {
   amount: number | null;
   merged_lines: number;
   notes: string[];        // 需核對的原因
+  fixes: string[];        // 已自動校正的地方（例如依產品資料校正品名）
 };
 
 export type ParsedReceipt = {
@@ -47,8 +48,10 @@ const RE_CODE_LINE = /^(\d{7,14})(?:\s+(.*))?$/;
 const RE_DIVIDER = /^[-=_ ]{4,}$/;
 const RE_BRAND = /^[A-Z][A-Z&.\- ]{1,20}$/;
 
+// OCR 常把千分位拆開（「44, 900」「44 ,900」），先接回去再取數字
 function parseNumbers(rest: string) {
-  return (rest.match(/-?[\d,]*\d/g) ?? []).map(num);
+  const joined = rest.replace(/(\d)\s*,\s*(?=\d{3}(?!\d))/g, '$1,');
+  return (joined.match(/-?[\d,]*\d/g) ?? []).map(num);
 }
 
 export function parseReceiptText(text: string): ParsedReceipt {
@@ -137,7 +140,7 @@ export function parseReceiptText(text: string): ParsedReceipt {
       model: /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{4,8}$/.test(last) ? last : '',
       barcode: looksGtin ? code : '',
       product_code: looksGtin ? '' : code,
-      qty, unit_price: price, amount, merged_lines: 1, notes,
+      qty, unit_price: price, amount, merged_lines: 1, notes, fixes: [],
     });
   });
 

@@ -1,6 +1,7 @@
 // 資料存取：讀取走資料表／view（受 RLS 限制），寫入只能呼叫 RPC。
 import { supabase } from './clients';
 import type { OcrWord } from './ocrLayout';
+import type { CatalogEntry } from './catalogMatch';
 import type { AuditLog, Device, Me, Notification, OrderItem, OrderSummary, Profile, Store, UserStore } from './types';
 
 export class ApiError extends Error {
@@ -87,6 +88,18 @@ export async function adminCreateUser(input: { email: string; display_name: stri
     throw new ApiError(body?.code ?? 'NETWORK', body?.detail ?? '');
   }
   return data as { user_id: string; email: string };
+}
+
+// 產品資料：依型號查建檔品名（校正辨識結果用）
+export async function catalogByModels(models: string[]) {
+  if (!models.length) return [] as CatalogEntry[];
+  return unwrap(await supabase.from('product_catalog').select('product_name, model').in('model', models)) as CatalogEntry[];
+}
+
+export async function catalogCount() {
+  const { count, error } = await supabase.from('product_catalog').select('code', { count: 'exact', head: true });
+  if (error) throw new ApiError(error.message);
+  return count ?? 0;
 }
 
 // Edge Function：拍照辨識（Google Cloud Vision），回傳字詞與位置；圖片不儲存

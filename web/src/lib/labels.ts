@@ -34,6 +34,7 @@ export const ACTION_LABEL: Record<string, string> = {
   admin_update_user: '修改帳號',
   bootstrap_admin: '建立第一位管理者',
   system_migration: '系統調整',
+  admin_import_catalog: '匯入產品資料',
   direct_db_change: '⚠ 未經系統流程的資料庫修改',
 };
 

@@ -41,7 +41,9 @@ export function linesFromWords(words: OcrWord[]): string {
     let line = '';
     let prevRight = -Infinity;
     for (const b of items) {
-      if (line && b.left - prevRight > h * 0.35) line += ' ';
+      // 逗號、句點本身很窄，旁邊的間距看起來較大，門檻放寬
+      const punct = /^[,.]/.test(b.t) || /[,.]$/.test(line);
+      if (line && b.left - prevRight > h * (punct ? 0.7 : 0.35)) line += ' ';
       line += b.t;
       prevRight = b.right;
     }

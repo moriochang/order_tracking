@@ -137,4 +137,5 @@ export type DraftItem = {
   source?: 'manual' | 'ocr';
   product_code?: string;   // 掃描到的內部代碼，不顯示
   scan_notes?: string[];   // 掃描交叉核對不符的地方，編輯儲存後清除
+  scan_fixes?: string[];   // 掃描時已自動校正的地方（僅提示）
 };

@@ -98,6 +98,7 @@ export function NewOrderPage() {
         source: 'ocr' as const,
         product_code: it.product_code,
         scan_notes: [...it.notes, ...(it.qty ? [] : ['數量未辨識，暫設 1 台'])],
+        scan_fixes: it.fixes,
       })),
     ]);
     setScan(r);
@@ -219,6 +220,7 @@ export function NewOrderPage() {
                       `（其中 ${it.devices.filter((d) => d.initial_status === 'excluded').length} 台已取走／不追蹤）`}
                   </div>
                   {it.item_note && <div className="small">備註：{it.item_note}</div>}
+                  {it.scan_fixes?.map((n) => <div key={n} className="small ok-text">✓ {n}</div>)}
                   {it.scan_notes?.map((n) => <div key={n} className="small warn-text">需核對：{n}</div>)}
                   {draftItemProblems(it).map((n) => <div key={n} className="small danger-text">・{n}</div>)}
                 </div>

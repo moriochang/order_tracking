@@ -88,7 +88,7 @@ button, .button {
   background: var(--primary); color: var(--primary-text); cursor: pointer; min-height: 42px;
   text-decoration: none; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
 }
-button.secondary { background: var(--surface); color: var(--primary); }
+button.secondary, .button.secondary { background: var(--surface); color: var(--primary); }
 button.danger { background: var(--danger); border-color: var(--danger); }
 button.link { background: none; border: none; color: var(--primary); padding: 4px; min-height: auto; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }

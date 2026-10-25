@@ -4,11 +4,32 @@ import { useState } from 'react';
 import { parseReceiptText, type ParsedReceipt } from '../lib/receiptParser';
 import { linesFromWords } from '../lib/ocrLayout';
 import { compressImage } from '../lib/image';
-import { ocrReceipt } from '../lib/api';
+import { catalogByModels, ocrReceipt } from '../lib/api';
+import { matchCatalogName } from '../lib/catalogMatch';
 import { fmtDate } from '../lib/format';
 import { Dialog, ErrorBanner } from './ui';
 
 export type ScanResult = { raw_text: string; parsed: ParsedReceipt; provider: string; image_url?: string };
+
+// 依產品資料校正品名；找不到型號時提示核對。產品資料尚未匯入或讀取失敗時略過。
+async function withCatalog(parsed: ParsedReceipt): Promise<ParsedReceipt> {
+  const models = [...new Set(parsed.items.map((i) => i.model).filter(Boolean))];
+  const catalog = await catalogByModels(models).catch(() => null);
+  if (!catalog?.length) return parsed;
+  return {
+    ...parsed,
+    items: parsed.items.map((it) => {
+      if (!it.model) return it;
+      if (!catalog.some((c) => c.model === it.model)) {
+        return { ...it, notes: [...it.notes, `產品資料中找不到型號 ${it.model}，請核對品名`] };
+      }
+      const fixed = matchCatalogName(it.full_product_name, it.model, catalog);
+      return fixed
+        ? { ...it, full_product_name: fixed, fixes: [...it.fixes, `品名已依產品資料校正（辨識為「${it.full_product_name}」）`] }
+        : it;
+    }),
+  };
+}
 
 export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResult) => void; onClose: () => void }) {
   const [text, setText] = useState('');
@@ -30,7 +51,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
       const lines = linesFromWords(result.words) || result.text;
       setText(lines);
       setProvider(result.provider);
-      setParsed(parseReceiptText(lines));
+      setParsed(await withCatalog(parseReceiptText(lines)));
     } catch (e) {
       setError(e);
     } finally {
@@ -56,7 +77,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
             <textarea rows={8} value={text} placeholder="貼上單據文字"
               onChange={(e) => { setText(e.target.value); setParsed(null); }} />
             <div className="row gap end">
-              <button type="button" className="secondary" onClick={() => setParsed(parseReceiptText(text))} disabled={!text.trim()}>解析</button>
+              <button type="button" className="secondary" onClick={async () => setParsed(await withCatalog(parseReceiptText(text)))} disabled={!text.trim()}>解析</button>
             </div>
           </div>
         </details>
@@ -95,6 +116,7 @@ function ScanPreview({ parsed }: { parsed: ParsedReceipt }) {
               {it.barcode && `・條碼 ${it.barcode}`}
               {it.merged_lines > 1 && `・由 ${it.merged_lines} 行合併`}
             </span>
+            {it.fixes.map((n) => <div key={n} className="small ok-text">✓ {n}</div>)}
             {it.notes.map((n) => <div key={n} className="small warn-text">需核對：{n}</div>)}
           </li>
         ))}

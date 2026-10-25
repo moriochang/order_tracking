@@ -85,6 +85,15 @@ test('辨識錯字會被交叉核對攔下', () => {
   assert.equal(r3.checks.find((c) => /合計/.test(c.label))?.ok, false);
 });
 
+test('千分位被拆開時仍能正確對應數量、單價、金額', () => {
+  const r = parseReceiptText(MBN
+    .replace('1000001 7 22,900 160,300TX', '1000001 7 22, 900 160 ,300TX')
+    .replace('1000002 7 22,900 160,300TX', '1000002 7 22,900 160, 300 TX'));
+  assert.deepEqual(r.items.map((i) => [i.qty, i.unit_price, i.amount, i.notes]), [
+    [7, 22900, 160300, []], [7, 22900, 160300, []],
+  ]);
+});
+
 test('空白或無關文字：不捏造欄位', () => {
   const r = parseReceiptText('hello\nworld');
   assert.deepEqual([r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq, r.items.length], ['', '', '', '', 0]);

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth, useMe } from '../auth/AuthProvider';
 import { ALLOWED_EMAIL_DOMAIN } from '../lib/clients';
-import { adminCreateUser, listAdminAudit, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
+import { adminCreateUser, catalogCount, listAdminAudit, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
 import { fmtDateTime } from '../lib/format';
 import { ACTION_LABEL, FIELD_LABEL, ROLE_LABEL } from '../lib/labels';
 import type { Profile, Role, Store } from '../lib/types';
@@ -23,6 +23,7 @@ export function SettingsPage() {
       <h1>設定</h1>
       <StoresSection stores={stores.data ?? []} error={stores.error} onSaved={reloadAll} />
       <UsersSection users={users.data ?? []} stores={stores.data ?? []} error={users.error} onSaved={reloadAll} />
+      <CatalogSection onSaved={reloadAll} />
       <section className="card stack">
         <h2>帳號與門市異動紀錄（最近 50 筆）</h2>
         <ErrorBanner error={audit.error} />
@@ -33,6 +34,7 @@ export function SettingsPage() {
               {(l.changed_fields ?? []).length > 0 && `｜${(l.changed_fields ?? []).map((f) => `${FIELD_LABEL[f] ?? f}：${String(l.before_data?.[f] ?? '空白')} → ${String(l.after_data?.[f] ?? '空白')}`).join('；')}`}
               {l.operation === 'INSERT' && `｜新增 ${l.entity_type === 'user_store' ? `門市指派 ${l.after_data?.store_code}` : String(l.after_data?.email ?? l.after_data?.code ?? '')}`}
               {l.operation === 'DELETE' && `｜移除 ${l.entity_type === 'user_store' ? `門市指派 ${l.before_data?.store_code}` : ''}`}
+              {l.action === 'admin_import_catalog' && `｜${Number(l.after_data?.rows ?? 0).toLocaleString()} 筆`}
               {l.reason && `｜原因：${l.reason}`}
             </li>
           ))}
@@ -240,5 +242,98 @@ function EditUserDialog({ user, stores, onClose, onSaved }: { user: UserRow; sto
         </div>
       </div>
     </Dialog>
+  );
+}
+
+// 產品資料：上傳公司建檔的 Excel（欄位 Code、product_name、大分類、中分類、小分類），整批取代
+type CatalogRow = { code: string; product_name: string; category: string; sub_category: string; detail_category: string };
+
+async function readCatalogFile(file: File): Promise<CatalogRow[]> {
+  const { default: readXlsxFile } = await import('read-excel-file/browser');
+  const rows: CatalogRow[] = [];
+  for (const { data } of await readXlsxFile(file)) {
+    const header = (data[0] ?? []).map((c) => String(c ?? '').trim());
+    const col = (name: string) => header.indexOf(name);
+    if (col('Code') < 0 || col('product_name') < 0) continue;
+    const cell = (row: unknown[], name: string) => (col(name) < 0 ? '' : String(row[col(name)] ?? '').trim());
+    for (const row of data.slice(1)) {
+      const raw = row[col('Code')];
+      // 代碼若被 Excel 存成數字，補回前導 0（建檔代碼為 10 碼）
+      const code = typeof raw === 'number' ? String(raw).padStart(10, '0') : String(raw ?? '').trim();
+      const name = cell(row, 'product_name');
+      if (code && name) {
+        rows.push({ code, product_name: name, category: cell(row, '大分類'), sub_category: cell(row, '中分類'), detail_category: cell(row, '小分類') });
+      }
+    }
+  }
+  return rows;
+}
+
+function CatalogSection({ onSaved }: { onSaved: () => void }) {
+  const count = useAsync(catalogCount, []);
+  const [rows, setRows] = useState<CatalogRow[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [done, setDone] = useState('');
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    setError(null); setDone(''); setRows(null); setBusy(true);
+    try {
+      const parsed = await readCatalogFile(file);
+      if (!parsed.length) throw new Error('檔案中找不到「Code」與「product_name」欄位');
+      setRows(parsed);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importRows() {
+    if (!rows) return;
+    setBusy(true); setError(null);
+    try {
+      const r = await rpc<{ rows: number }>('admin_import_catalog', { p_rows: rows });
+      setDone(`已匯入 ${r.rows.toLocaleString()} 筆`);
+      setRows(null);
+      count.reload();
+      onSaved();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const byCategory = rows && Object.entries(rows.reduce<Record<string, number>>((m, r) => {
+    m[r.category || '（無）'] = (m[r.category || '（無）'] ?? 0) + 1;
+    return m;
+  }, {})).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <section className="card stack">
+      <h2>產品資料</h2>
+      <p className="small muted">
+        拍照辨識時用型號比對建檔品名，自動校正辨識錯字。目前 {count.data?.toLocaleString() ?? '…'} 筆。
+        上傳 Excel（需有 Code、product_name 欄位）會整批取代現有資料。
+      </p>
+      <label className={`button secondary ${busy ? 'disabled' : ''}`}>
+        {busy && !rows ? '讀取中…' : '選擇 Excel 檔'}
+        <input type="file" accept=".xlsx" className="hidden" disabled={busy}
+          onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = ''; }} />
+      </label>
+      <ErrorBanner error={error} />
+      {done && <div className="alert info">{done}</div>}
+      {rows && byCategory && (
+        <div className="card inset stack">
+          <div>讀到 {rows.length.toLocaleString()} 筆：{byCategory.map(([c, n]) => `${c} ${n.toLocaleString()}`).join('、')}</div>
+          <div className="row gap end">
+            <button className="secondary" onClick={() => setRows(null)} disabled={busy}>取消</button>
+            <button onClick={importRows} disabled={busy}>{busy ? '匯入中…' : '確認匯入（取代現有資料）'}</button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
