@@ -1,36 +1,72 @@
-// 掃描明細：用 iPhone「掃描文字」（或 Mac 原況文字複製後貼上）取得單據文字，解析後預覽，確認才帶入表單。
+// 掃描明細：拍照後由 Google Cloud Vision 辨識（或貼上文字），在瀏覽器解析後預覽，確認才帶入表單。
+// 照片只在這次辨識時傳送，不儲存；畫面上保留照片供核對，離開頁面即消失。
 import { useState } from 'react';
 import { parseReceiptText, type ParsedReceipt } from '../lib/receiptParser';
+import { linesFromWords } from '../lib/ocrLayout';
+import { compressImage } from '../lib/image';
+import { ocrReceipt } from '../lib/api';
 import { fmtDate } from '../lib/format';
-import { Dialog } from './ui';
+import { Dialog, ErrorBanner } from './ui';
 
-export type ScanResult = { raw_text: string; parsed: ParsedReceipt };
+export type ScanResult = { raw_text: string; parsed: ParsedReceipt; provider: string; image_url?: string };
 
 export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResult) => void; onClose: () => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<ParsedReceipt | null>(null);
+  const [provider, setProvider] = useState('manual_text');
+  const [imageUrl, setImageUrl] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function onPhoto(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    setParsed(null);
+    try {
+      const { base64, url } = await compressImage(file);
+      setImageUrl(url);
+      const result = await ocrReceipt(base64);
+      const lines = linesFromWords(result.words) || result.text;
+      setText(lines);
+      setProvider(result.provider);
+      setParsed(parseReceiptText(lines));
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <Dialog title="掃描明細" onClose={onClose}>
       <div className="stack">
-        <ol className="small muted steps">
-          <li>iPhone／iPad：點一下下方文字框，再點鍵盤上方的「掃描文字」圖示（或長按文字框選「掃描文字」）。</li>
-          <li>鏡頭對準單據，從「iStore」到「應稅科技 NT$」都要在畫面內，點「插入」。單據太長可以分段掃描，文字會接在後面。</li>
-          <li>Mac：在照片上選取單據文字複製，貼到下方。</li>
-        </ol>
-        <textarea rows={10} value={text} placeholder="在這裡掃描或貼上單據文字"
-          onChange={(e) => { setText(e.target.value); setParsed(null); }} />
-        <div className="row gap end">
-          <button type="button" className="secondary" onClick={() => { setText(''); setParsed(null); }} disabled={!text}>清除</button>
-          <button type="button" onClick={() => setParsed(parseReceiptText(text))} disabled={!text.trim()}>解析</button>
-        </div>
+        <label className={`button ${busy ? 'disabled' : ''}`}>
+          {busy ? '辨識中…' : imageUrl ? '重新拍照' : '拍照辨識'}
+          <input type="file" accept="image/*" className="hidden" disabled={busy}
+            onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+        </label>
+        <p className="small muted">單據放平、光線充足，從「iStore」拍到「應稅科技 NT$」。也可以從相簿選照片。</p>
+        <ErrorBanner error={error} />
+        {imageUrl && <a href={imageUrl} target="_blank" rel="noreferrer"><img src={imageUrl} alt="單據照片" className="scan-thumb" /></a>}
+
+        <details open={!imageUrl}>
+          <summary className="small">{imageUrl ? '辨識出的文字（可修改後重新解析）' : '或貼上單據文字'}</summary>
+          <div className="stack tight">
+            <textarea rows={8} value={text} placeholder="貼上單據文字"
+              onChange={(e) => { setText(e.target.value); setParsed(null); }} />
+            <div className="row gap end">
+              <button type="button" className="secondary" onClick={() => setParsed(parseReceiptText(text))} disabled={!text.trim()}>解析</button>
+            </div>
+          </div>
+        </details>
 
         {parsed && <ScanPreview parsed={parsed} />}
 
         <div className="row gap end">
           <button type="button" className="secondary" onClick={onClose}>取消</button>
-          <button type="button" disabled={!parsed || (!parsed.items.length && !parsed.receipt_no)}
-            onClick={() => parsed && onApply({ raw_text: text, parsed })}>帶入表單</button>
+          <button type="button" disabled={busy || !parsed || (!parsed.items.length && !parsed.receipt_no)}
+            onClick={() => parsed && onApply({ raw_text: text, parsed, provider, image_url: imageUrl })}>帶入表單</button>
         </div>
       </div>
     </Dialog>

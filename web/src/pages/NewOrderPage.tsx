@@ -143,7 +143,8 @@ export function NewOrderPage() {
           order_note: h.order_note.trim() || null,
           duplicate_ack_reason: ackReason.trim() || null,
           items: items.map(draftItemPayload),
-          ...(scan && items.some((i) => i.source === 'ocr') ? { scan: { raw_text: scan.raw_text, parsed: scan.parsed } } : {}),
+          ...(scan && items.some((i) => i.source === 'ocr')
+            ? { scan: { raw_text: scan.raw_text, parsed: { ...scan.parsed, provider: scan.provider } } } : {}),
         },
       });
       navigate(`/orders/${result.order_id}`, { replace: true });
@@ -172,6 +173,7 @@ export function NewOrderPage() {
             {scan && (
               <div className="alert info stack tight">
                 <div>已從掃描帶入單據資料，請逐欄與單據核對。顧客姓名與電話單據上沒有，請手動填寫。</div>
+                {scan.image_url && <a href={scan.image_url} target="_blank" rel="noreferrer"><img src={scan.image_url} alt="單據照片" className="scan-thumb" /></a>}
                 {scanStoreMismatch && <div className="warn-text">⚠ 單據門市代碼 {scan.parsed.store_code} 不是你所屬的門市，門市未自動帶入。</div>}
                 <ScanChecks parsed={scan.parsed} />
               </div>

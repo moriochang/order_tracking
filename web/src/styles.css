@@ -184,3 +184,5 @@ dialog::backdrop { background: rgba(16, 24, 40, 0.45); }
 .scan-text { white-space: pre-wrap; font-size: 0.8rem; background: var(--inset); padding: 8px; border-radius: 6px; max-height: 300px; overflow: auto; }
 dl.compact { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
 dl.compact dd { margin: 0; }
+.button.disabled { opacity: 0.45; pointer-events: none; }
+.scan-thumb { max-width: 100%; max-height: 240px; border: 1px solid var(--border); border-radius: 6px; display: block; }

@@ -1,5 +1,6 @@
 // 資料存取：讀取走資料表／view（受 RLS 限制），寫入只能呼叫 RPC。
 import { supabase } from './clients';
+import type { OcrWord } from './ocrLayout';
 import type { AuditLog, Device, Me, Notification, OrderItem, OrderSummary, Profile, Store, UserStore } from './types';
 
 export class ApiError extends Error {
@@ -86,4 +87,14 @@ export async function adminCreateUser(input: { email: string; display_name: stri
     throw new ApiError(body?.code ?? 'NETWORK', body?.detail ?? '');
   }
   return data as { user_id: string; email: string };
+}
+
+// Edge Function：拍照辨識（Google Cloud Vision），回傳字詞與位置；圖片不儲存
+export async function ocrReceipt(imageBase64: string) {
+  const { data, error } = await supabase.functions.invoke('ocr-receipt', { body: { image: imageBase64 } });
+  if (error) {
+    const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new ApiError(body?.code ?? 'NETWORK', body?.detail ?? '');
+  }
+  return data as { provider: string; text: string; words: OcrWord[] };
 }

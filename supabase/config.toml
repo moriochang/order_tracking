@@ -9,3 +9,6 @@ project_id = "YOUR_FIREBASE_PROJECT_ID"
 [functions.admin-users]
 # Firebase token 由函式內部透過 PostgREST（get_me）驗證，閘道不另外驗證
 verify_jwt = false
+
+[functions.ocr-receipt]
+verify_jwt = false

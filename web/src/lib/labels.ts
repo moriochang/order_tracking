@@ -112,6 +112,9 @@ const ERROR_MESSAGE: Record<string, string> = {
   DOMAIN_NOT_ALLOWED: '只能開通公司網域的 Email。',
   INVALID_BARCODE: '國際條碼格式或檢查碼不正確，請核對條碼數字。',
   SERVER_NOT_CONFIGURED: '伺服器尚未設定 Firebase 服務帳戶，請聯絡系統管理者。',
+  OCR_PROVIDER_ERROR: '辨識服務暫時無法使用，請稍後再試，或改用手動輸入。',
+  OCR_TIMEOUT: '辨識逾時，請重新拍照或改用手動輸入。',
+  IMAGE_TOO_LARGE: '照片太大，請重新拍照。',
   NETWORK: '網路或伺服器錯誤，操作可能未完成，請重新載入確認。',
 };
 
