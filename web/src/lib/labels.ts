@@ -125,6 +125,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   SERVER_NOT_CONFIGURED: '伺服器尚未設定 Firebase 服務帳戶，請聯絡系統管理者。',
   OCR_PROVIDER_ERROR: '辨識服務暫時無法使用，請稍後再試，或改用手動輸入。',
   OCR_TIMEOUT: '辨識逾時，請重新拍照或改用手動輸入。',
+  IMAGE_UNSUPPORTED: '這個瀏覽器無法讀取這張照片（例如 HEIC 格式）。請用 iPhone 直接拍照，或先轉成 JPG 再上傳。',
   IMAGE_TOO_LARGE: '照片太大，請重新拍照。',
   DUPLICATE: '資料重複，例如預結號碼開頭已被其他門市使用。',
   SN_REQUIRED: '請輸入 SN。',

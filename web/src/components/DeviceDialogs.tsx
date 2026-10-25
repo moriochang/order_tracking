@@ -16,6 +16,7 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [candidates, setCandidates] = useState<string[] | null>(null);
+  const [ocrText, setOcrText] = useState('');
 
   async function onPhoto(file: File | undefined) {
     if (!file) return;
@@ -23,7 +24,10 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
     try {
       const { base64 } = await compressImage(file, 2000);
       const result = await ocrReceipt(base64);
-      const found = extractSerials(linesFromWords(result.words) || result.text);
+      // 版面重組與 Vision 原始文字各找一次，合併結果
+      const layout = linesFromWords(result.words);
+      const found = [...new Set([...extractSerials(layout), ...extractSerials(result.text)])];
+      setOcrText(layout || result.text);
       setCandidates(found);
       if (found.length === 1) onChange(found[0]);
     } catch (e) {
@@ -49,7 +53,15 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
         </div>
       </div>
       <ErrorBanner error={error} />
-      {candidates?.length === 0 && <div className="small warn-text">照片中找不到 SN，請對準標籤上「(S) Serial No.」那一行重拍，或手動輸入。</div>}
+      {candidates?.length === 0 && (
+        <div className="stack tight">
+          <div className="small warn-text">照片中找不到 SN，請靠近一點、對準標籤上「(S) Serial No.」那一行重拍，或手動輸入。</div>
+          <details className="small">
+            <summary>辨識出的文字</summary>
+            <pre className="scan-text">{ocrText || '（沒有辨識到任何文字）'}</pre>
+          </details>
+        </div>
+      )}
       {candidates && candidates.length > 1 && (
         <div className="row gap wrap small">找到多個可能的 SN，請點選：
           {candidates.map((c) => <button key={c} type="button" className="secondary small-btn" onClick={() => onChange(c)}>{c}</button>)}

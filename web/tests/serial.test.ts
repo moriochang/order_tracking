@@ -22,7 +22,17 @@ test('標題與值分兩行；英文 O 改為 0', () => {
   assert.equal(normalizeSn(' cw93 fpxm56 '), 'CW93FPXM56');
 });
 
-test('沒有標示時，從 10–12 碼英數字找候選（排除料號、型號等欄位）', () => {
-  assert.deepEqual(extractSerials('Part No. MWUU3TA/A\nCW93FPXM56\nModel No. A3137\n195949594816'), ['CW93FPXM56']);
+test('照片裡有兩張標籤（另一張被切掉一半）；常見辨識誤差', () => {
+  assert.deepEqual(extractSerials(`1 95950 69861 9 UPC 1 95950
+(1P) Part No. MDVQ4TA/A (1P) Part No. MDH
+(S) Serial No. KV79D
+Model No. A3449
+(S) Serial No. GFM2JJNL2F
+Model No. A3448`), ['GFM2JJNL2F']);
+  assert.deepEqual(extractSerials('(5) Seria1 No. GFM2JJNL2F'), ['GFM2JJNL2F']);
+});
+
+test('沒有「Serial No.」標示時不猜', () => {
+  assert.deepEqual(extractSerials('Part No. MWUU3TA/A\nCW93FPXM56\nModel No. A3137\n195949594816'), []);
   assert.deepEqual(extractSerials('Assembled in China'), []);
 });
