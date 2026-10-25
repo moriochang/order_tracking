@@ -1,12 +1,64 @@
 // 單機作業對話框：登記到貨（SN）、通知顧客、完成交付、單機備註、更正 SN
 import { useState } from 'react';
-import { rpc } from '../lib/api';
+import { ocrReceipt, rpc } from '../lib/api';
+import { compressImage } from '../lib/image';
+import { linesFromWords } from '../lib/ocrLayout';
+import { extractSerials, looksLikeSn, normalizeSn } from '../lib/serial';
 import { METHOD_LABEL, OUTCOME_LABEL } from '../lib/labels';
 import type { Device, OrderItem } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
 import { useSubmit } from './OrderDialogs';
 
 type Props = { device: Device; item: OrderItem; onClose: () => void; onSaved: () => void };
+
+// SN 輸入：可手動輸入或拍包裝盒標籤辨識；英文 O 自動改為 0
+function SnInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [candidates, setCandidates] = useState<string[] | null>(null);
+
+  async function onPhoto(file: File | undefined) {
+    if (!file) return;
+    setBusy(true); setError(null); setCandidates(null);
+    try {
+      const { base64 } = await compressImage(file, 2000);
+      const result = await ocrReceipt(base64);
+      const found = extractSerials(linesFromWords(result.words) || result.text);
+      setCandidates(found);
+      if (found.length === 1) onChange(found[0]);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const sn = normalizeSn(value);
+  return (
+    <div className="stack tight">
+      <div className="stack tight">
+        <span>{label}</span>
+        <div className="row gap">
+          <input className="grow" aria-label={label} autoCapitalize="characters" autoComplete="off" value={value}
+            onChange={(e) => onChange(normalizeSn(e.target.value))} />
+          <label className={`button secondary ${busy ? 'disabled' : ''}`}>
+            {busy ? '辨識中…' : '拍照辨識'}
+            <input type="file" accept="image/*" className="hidden" disabled={busy}
+              onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+          </label>
+        </div>
+      </div>
+      <ErrorBanner error={error} />
+      {candidates?.length === 0 && <div className="small warn-text">照片中找不到 SN，請對準標籤上「(S) Serial No.」那一行重拍，或手動輸入。</div>}
+      {candidates && candidates.length > 1 && (
+        <div className="row gap wrap small">找到多個可能的 SN，請點選：
+          {candidates.map((c) => <button key={c} type="button" className="secondary small-btn" onClick={() => onChange(c)}>{c}</button>)}
+        </div>
+      )}
+      {sn && !looksLikeSn(sn) && <div className="small warn-text">SN 一般是 10–12 碼英數字，請再核對一次。</div>}
+    </div>
+  );
+}
 
 const unitLabel = (item: OrderItem, device: Device) => `${item.line_no}-${device.unit_no} ${item.full_product_name}`;
 
@@ -17,17 +69,14 @@ export function ArrivalDialog({ device, item, onClose, onSaved }: Props) {
     <Dialog title="登記到貨" onClose={onClose}>
       <div className="stack">
         <p className="product-name">{unitLabel(item, device)}</p>
-        <label>SN（必填）
-          <input autoFocus autoCapitalize="characters" autoComplete="off" value={sn}
-            onChange={(e) => setSn(e.target.value.toUpperCase())} />
-        </label>
-        <p className="small muted">請核對機器上的序號，系統會檢查 SN 是否已登記在其他機器。</p>
+        <SnInput label="SN（配件沒有 SN 可留空）" value={sn} onChange={setSn} />
+        <p className="small muted">可拍包裝盒標籤自動辨識，辨識後請與標籤核對。系統會檢查 SN 是否已登記在其他機器。</p>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy || !sn.trim()}
-            onClick={() => run(() => rpc('register_arrival', { p_device_id: device.id, p_expected_version: device.version, p_sn: sn }))}>
-            {busy ? '登記中…' : '確認到貨'}
+          <button disabled={busy}
+            onClick={() => run(() => rpc('register_arrival', { p_device_id: device.id, p_expected_version: device.version, p_sn: sn.trim() || null }))}>
+            {busy ? '登記中…' : sn.trim() ? '確認到貨' : '確認到貨（無 SN）'}
           </button>
         </div>
       </div>
@@ -88,7 +137,7 @@ export function DeliveryDialog({ device, item, onClose, onSaved }: Props) {
     <Dialog title="完成交付" onClose={onClose}>
       <div className="stack">
         <p className="product-name">{unitLabel(item, device)}</p>
-        <p>SN：<strong>{device.sn}</strong>（請與實機核對）</p>
+        {device.sn ? <p>SN：<strong>{device.sn}</strong>（請與實機核對）</p> : <p className="small muted">這台沒有登記 SN。</p>}
         {device.status === 'arrived_pending_notify' && <p className="small muted">這台尚未通知，交付時會自動記一筆「顧客到店」通知。</p>}
         <label>交付備註（選填）<input value={note} placeholder="例：本人取貨、代領人姓名" onChange={(e) => setNote(e.target.value)} /></label>
         <ErrorBanner error={error} />
@@ -130,10 +179,10 @@ export function CorrectSnDialog({ device, item, onClose, onSaved }: Props) {
   const [reason, setReason] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
-    <Dialog title="更正 SN" onClose={onClose}>
+    <Dialog title={device.sn ? '更正 SN' : '補登 SN'} onClose={onClose}>
       <div className="stack">
         <p className="product-name">{unitLabel(item, device)}</p>
-        <label>正確的 SN<input autoCapitalize="characters" value={sn} onChange={(e) => setSn(e.target.value.toUpperCase())} /></label>
+        <SnInput label="正確的 SN" value={sn} onChange={setSn} />
         <label>更正原因（必填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
         <ErrorBanner error={error} />
         <div className="row gap end">

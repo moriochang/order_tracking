@@ -14,10 +14,9 @@ const call = (db, who, sql, params) => as(db, who, `select ${sql} as r`, params)
 test('T100 完整流程：到貨登記 SN → 已貼 → 通知 → 交付，每步留紀錄', async (t) => {
   const { db, order_id, devs } = await setup(1); t.after(() => db.close());
   let [d] = await devs();
-  assert.equal(await expectError(call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, '  '])), 'SN_REQUIRED');
-  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, ' f4gx 12ab ']);
+  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, ' cw93 fpxm56 ']);
   [d] = await devs();
-  assert.deepEqual([d.status, d.sn], ['arrived_pending_notify', 'F4GX12AB']);
+  assert.deepEqual([d.status, d.sn], ['arrived_pending_notify', 'CW93FPXM56']);
 
   await call(db, 'staffA', 'set_labeled($1, $2, true)', [d.id, d.version]);
   await call(db, 'staffA', `record_notification($1, 'phone', 'no_answer', '晚點再打')`, [[d.id]]);
@@ -96,4 +95,17 @@ test('T105 繞過 API 直接改狀態仍被擋下', async (t) => {
   const { db, devs } = await setup(1); t.after(() => db.close());
   const [d] = await devs();
   assert.equal(await expectError(asDbAdmin(db, `update devices set status = 'delivered' where id = $1`, [d.id])), 'ILLEGAL_TRANSITION');
+});
+
+test('T106 SN 選填（配件）；之後可補登；英文 O 視為數字 0', async (t) => {
+  const { db, devs } = await setup(2); t.after(() => db.close());
+  let [a, b] = await devs();
+  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [a.id, a.version, '  ']);
+  [a] = await devs();
+  assert.deepEqual([a.status, a.sn], ['arrived_pending_notify', null]);
+  assert.equal(await expectError(call(db, 'staffA', 'correct_sn($1, $2, $3, null)', [a.id, a.version, 'X'])), 'REASON_REQUIRED');
+  await call(db, 'staffA', 'correct_sn($1, $2, $3, $4)', [a.id, a.version, 'cO2nqcc6fy17', '到貨時漏登']);
+  await call(db, 'staffA', 'register_arrival($1, $2, $3)', [b.id, b.version, 'CW93FPXM56']);
+  [a, b] = await devs();
+  assert.deepEqual([a.sn, b.sn], ['C02NQCC6FY17', 'CW93FPXM56']);
 });

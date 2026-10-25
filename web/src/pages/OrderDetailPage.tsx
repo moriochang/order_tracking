@@ -160,9 +160,9 @@ export function OrderDetailPage() {
                         {dev.delivery_note && <div className="small muted">交付：{dev.delivery_note}</div>}
                       </td>
                       <td data-label="SN">
-                        {dev.sn ?? <span className="muted">尚未登記</span>}
-                        {active && dev.sn && dev.status !== 'cancelled' && (
-                          <button className="link small" onClick={() => setModal({ kind: 'sn', device: dev, item: it })}>更正</button>
+                        {dev.sn ?? <span className="muted">{dev.status === 'pending_arrival' ? '尚未登記' : '無'}</span>}
+                        {active && ['arrived_pending_notify', 'notified_pending_pickup', 'delivered'].includes(dev.status) && (
+                          <button className="link small" onClick={() => setModal({ kind: 'sn', device: dev, item: it })}>{dev.sn ? '更正' : '補登'}</button>
                         )}
                       </td>
                       <td data-label="狀態">
