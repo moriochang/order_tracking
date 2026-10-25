@@ -50,7 +50,7 @@ export function draftItemPayload(item: DraftItem) {
 }
 
 // 依型號查產品資料（輸入停頓 300ms 後查詢）；null 表示尚未查詢或型號太短
-function useCatalogByModel(model: string) {
+export function useCatalogByModel(model: string) {
   const key = model.trim().toUpperCase();
   const [result, setResult] = useState<{ key: string; names: string[] } | null>(null);
   useEffect(() => {
@@ -66,25 +66,49 @@ function useCatalogByModel(model: string) {
   return result?.key === key ? result.names : null;
 }
 
+// 型號對應品名：只有一筆時自動帶入，但不覆蓋同仁自己輸入的品名。
+// 可覆蓋的情況：品名空白、仍是先前自動帶入的值，或型號已改而品名還是開啟時的原值。
+export function useModelNameSuggest(model: string, name: string, setName: (name: string) => void) {
+  const names = useCatalogByModel(model);
+  const [autoName, setAutoName] = useState('');
+  const [initial] = useState({ model: model.trim().toUpperCase(), name });
+  useEffect(() => {
+    if (names?.length !== 1 || names[0] === name) return;
+    const modelChanged = model.trim().toUpperCase() !== initial.model;
+    if (!name.trim() || name === autoName || (modelChanged && name === initial.name)) {
+      setAutoName(names[0]);
+      setName(names[0]);
+    }
+  }, [names]);  // 只在查詢結果變動時執行
+  return { names, pick: (n: string) => { setAutoName(n); setName(n); } };
+}
+
+export function CatalogNameHint({ names, model, name, onPick }: {
+  names: string[] | null; model: string; name: string; onPick: (name: string) => void;
+}) {
+  if (!names) return null;
+  if (names.length === 0) return <div className="small muted">產品資料中沒有型號 {model.trim()}，請手動輸入品名。</div>;
+  if (names.length === 1) {
+    return name === names[0]
+      ? <div className="small ok-text">✓ 已依產品資料帶入品名</div>
+      : <div className="small">產品資料品名：{names[0]} <button type="button" className="link" onClick={() => onPick(names[0])}>套用</button></div>;
+  }
+  return (
+    <div className="stack tight">
+      <div className="small">型號 {model.trim()} 有 {names.length} 筆品名，請依單據選擇：</div>
+      {names.map((n) => (
+        <label key={n} className="radio small">
+          <input type="radio" checked={name === n} onChange={() => onPick(n)} />{n}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v: DraftItem) => void }) {
   const mode = modeOf(value.devices);
   const set = (patch: Partial<DraftItem>) => onChange({ ...value, ...patch });
-  const names = useCatalogByModel(value.model);
-  const [autoName, setAutoName] = useState('');   // 上次自動帶入的品名；同仁改過就不再覆蓋
-
-  // 只有一筆品名時自動帶入（品名空白，或仍是先前自動帶入的值）
-  useEffect(() => {
-    if (names?.length !== 1 || names[0] === value.full_product_name) return;
-    if (!value.full_product_name.trim() || value.full_product_name === autoName) {
-      setAutoName(names[0]);
-      onChange({ ...value, full_product_name: names[0] });
-    }
-  }, [names]);  // 只在查詢結果變動時執行
-
-  function pickName(name: string) {
-    setAutoName(name);
-    set({ full_product_name: name });
-  }
+  const { names, pick } = useModelNameSuggest(value.model, value.full_product_name, (n) => set({ full_product_name: n }));
 
   function setQty(raw: string) {
     const qty = Math.max(1, Math.min(999, Math.floor(Number(raw) || 1)));
@@ -124,18 +148,7 @@ export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v
         <input value={value.full_product_name} placeholder="輸入型號會自動帶入；或依單據上的完整品名輸入"
           onChange={(e) => set({ full_product_name: e.target.value })} />
       </label>
-      {names && names.length === 0 && <div className="small muted">產品資料中沒有型號 {value.model.trim()}，請手動輸入品名。</div>}
-      {names && names.length === 1 && value.full_product_name === names[0] && <div className="small ok-text">✓ 已依產品資料帶入品名</div>}
-      {names && names.length > 1 && (
-        <div className="stack tight">
-          <div className="small">型號 {value.model.trim()} 有 {names.length} 筆品名，請依單據選擇：</div>
-          {names.map((n) => (
-            <label key={n} className="radio small">
-              <input type="radio" checked={value.full_product_name === n} onChange={() => pickName(n)} />{n}
-            </label>
-          ))}
-        </div>
-      )}
+      <CatalogNameHint names={names} model={value.model} name={value.full_product_name} onPick={pick} />
       <label>商品備註<input value={value.item_note} onChange={(e) => set({ item_note: e.target.value })} /></label>
 
       <fieldset>

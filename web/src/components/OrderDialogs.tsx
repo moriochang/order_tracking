@@ -5,7 +5,7 @@ import { todayTaipei } from '../lib/format';
 import { FIELD_LABEL, STATUS_LABEL } from '../lib/labels';
 import type { Device, OrderItem, OrderSummary } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
-import { ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem } from './ItemEditor';
+import { CatalogNameHint, ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem, useModelNameSuggest } from './ItemEditor';
 
 function useSubmit(onDone: () => void) {
   const [busy, setBusy] = useState(false);
@@ -118,7 +118,7 @@ export function AddItemDialog({ orderId, onClose, onSaved }: { orderId: string; 
   );
 }
 
-const ITEM_FIELDS = ['full_product_name', 'barcode', 'model', 'item_note'] as const;
+const ITEM_FIELDS = ['model', 'barcode', 'full_product_name', 'item_note'] as const;
 
 export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState(() => Object.fromEntries(ITEM_FIELDS.map((f) => [f, item[f] ?? ''])) as Record<string, string>);
@@ -126,12 +126,21 @@ export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; on
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   const patch: Record<string, string | null> = {};
   for (const f of ITEM_FIELDS) if (form[f].trim() !== (item[f] ?? '')) patch[f] = form[f].trim() || null;
+  const { names, pick } = useModelNameSuggest(form.model, form.full_product_name, (n) => setForm((p) => ({ ...p, full_product_name: n })));
 
   return (
     <Dialog title={`修改商品 ${item.line_no}`} onClose={onClose}>
       <div className="stack">
         {ITEM_FIELDS.map((f) => (
-          <label key={f}>{FIELD_LABEL[f]}<input value={form[f]} onChange={(e) => setForm((p) => ({ ...p, [f]: e.target.value }))} /></label>
+          <div key={f} className="stack tight">
+            <label>{FIELD_LABEL[f]}
+              <input value={form[f]} onChange={(e) => {
+                const v = f === 'model' ? e.target.value.toUpperCase() : e.target.value;
+                setForm((p) => ({ ...p, [f]: v }));
+              }} />
+            </label>
+            {f === 'full_product_name' && <CatalogNameHint names={names} model={form.model} name={form.full_product_name} onPick={pick} />}
+          </div>
         ))}
         <label>修改原因（選填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
         <p className="small muted">數量請使用「修改數量」。</p>
