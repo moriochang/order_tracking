@@ -69,7 +69,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
           <input type="file" accept="image/*" className="hidden" disabled={busy}
             onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
-        <p className="small muted">單據放平、光線充足，從「iStore」拍到「應稅科技 NT$」。也可以從相簿選照片。</p>
+        <p className="small muted">單據放平擺正、光線充足。可以從照片選取。</p>
         <ErrorBanner error={error} />
         {imageUrl && <a href={imageUrl} target="_blank" rel="noreferrer"><img src={imageUrl} alt="單據照片" className="scan-thumb" /></a>}
 
