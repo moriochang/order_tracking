@@ -31,6 +31,9 @@ Model No. A3449
 (S) Serial No. GFM2JJNL2F
 Model No. A3448`), ['GFM2JJNL2F']);
   assert.deepEqual(extractSerials('(5) Seria1 No. GFM2JJNL2F'), ['GFM2JJNL2F']);
+  // 「Serial No.」被讀成連在一起時，不能把標題字當成 SN
+  assert.deepEqual(extractSerials('(S) SerialNo. GFM2JJNL2F'), ['GFM2JJNL2F']);
+  assert.deepEqual(extractSerials('(S) SERIALNO\nGFM2JJNL2F'), ['GFM2JJNL2F']);
 });
 
 test('沒有「Serial No.」標示時不猜', () => {

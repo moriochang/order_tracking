@@ -6,7 +6,8 @@ export const normalizeSn = (s: string) => s.toUpperCase().replace(/\s/g, '').rep
 export const looksLikeSn = (s: string) => /^[A-Z0-9]{10,12}$/.test(s) && /[A-Z]/.test(s) && /\d/.test(s);
 
 // 容許常見辨識誤差：(S) 讀成 (5)、Serial 的 i／l 讀成 1
-const RE_LABELED = /(?:\(\s*[S5]\s*\)|SER[I1L]A[L1I]\s*(?:N[O0]|NUMBER|#)?\.?|S\/N)\s*[:：.]?\s*([A-Z0-9]{8,14})\b/i;
+// 值必須含數字，且不是標題字本身（「Serial No.」可能被讀成連在一起的 SerialNo）
+const RE_LABELED = /(?:\(\s*[S5]\s*\)|SER[I1L]A[L1I]\s*(?:N[O0]|NUMBER|#)?\.?|S\/N)\s*[:：.]?\s*(?!SER[I1L]A[L1I])((?=[A-Z0-9]{0,13}\d)[A-Z0-9]{8,14})\b/i;
 
 export function extractSerials(text: string): string[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -16,7 +17,7 @@ export function extractSerials(text: string): string[] {
     if (m) found.add(normalizeSn(m[1]));
     else if (/SER[I1L]A[L1I]|\(\s*[S5]\s*\)/i.test(line) && lines[i + 1]) {
       // 標題與值分在兩行
-      const next = lines[i + 1].match(/^([A-Z0-9]{8,14})$/i);
+      const next = lines[i + 1].match(/^((?=[A-Z0-9]{0,13}\d)[A-Z0-9]{8,14})$/i);
       if (next) found.add(normalizeSn(next[1]));
     }
   });
