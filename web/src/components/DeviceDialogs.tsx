@@ -10,10 +10,14 @@ import { Dialog, ErrorBanner } from './ui';
 import { useSubmit } from './OrderDialogs';
 
 // 視窗上方的訂單資訊（訂單編號、顧客），與下方的商品分開顯示
-export type OrderRef = { no: string; customer: string };
+export type OrderRef = { no: string; customer: string; phone: string };
 function OrderHeader({ order }: { order?: OrderRef }) {
   if (!order) return null;
-  return <div className="dialog-order">訂單 <b>{order.no}</b>　顧客 <b>{order.customer}</b></div>;
+  return (
+    <div className="dialog-order">
+      訂單 <b>{order.no}</b>　顧客 <b>{order.customer}</b>　電話 <a href={`tel:${order.phone}`}><b>{order.phone}</b></a>
+    </div>
+  );
 }
 
 type Props = { device: Device; label: string; order?: OrderRef; onClose: () => void; onSaved: () => void };

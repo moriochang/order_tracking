@@ -63,7 +63,7 @@ export function TodoPage() {
   const rows = all.filter((r) => inTab(r, tab))
     .sort((a, b) => since(a, tab).localeCompare(since(b, tab)) || a.order_no.localeCompare(b.order_no) || a.unit_no - b.unit_no);
   const label = (r: TodoRow) => `${r.full_product_name}${r.sn ? `（${r.sn}）` : ''}`;
-  const orderOf = (r: TodoRow) => ({ no: r.order_no, customer: r.customer_name });
+  const orderOf = (r: TodoRow) => ({ no: r.order_no, customer: r.customer_name, phone: r.customer_phone });
 
   async function markLabeled(r: TodoRow) {
     setOpError(null);

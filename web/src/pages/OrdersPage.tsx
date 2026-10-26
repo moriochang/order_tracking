@@ -302,7 +302,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                             <StatusBadge status={l.device.status} />
                             {stepsOf(l.device).map((step) => (
                               <button key={step} type="button" className={`step step-${step}`}
-                                onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name })}>
+                                onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name, phone: o.customer_phone })}>
                                 {STEP_LABEL[step]}
                               </button>
                             ))}
@@ -325,7 +325,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="操作" className="desk-only">
                   {cell((l) => stepsOf(l.device).map((step) => (
                     <button key={step} type="button" className={`step step-${step}`}
-                      onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name })}>
+                      onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name, phone: o.customer_phone })}>
                       {STEP_LABEL[step]}
                     </button>
                   )))}
