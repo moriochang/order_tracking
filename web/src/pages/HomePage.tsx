@@ -8,7 +8,7 @@ import { OrderTable } from './OrdersPage';
 const TILES = [
   { key: 'pending_arrival', label: '待到貨' },
   { key: 'arrived_pending_notify', label: '待通知' },
-  { key: 'pending_label', label: '待貼標' },
+  { key: 'pending_label', label: '待貼' },
   { key: 'notified_pending_pickup', label: '待取貨' },
   { key: 'delivered', label: '已交付', stat: true },
 ];
