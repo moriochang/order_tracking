@@ -110,7 +110,7 @@ export function TodoPage() {
           <table className="list">
             <thead>
               <tr>
-                <th>{tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'}</th><th>已等</th>
+                <th>{tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'}</th><th>等待時間</th>
                 <th>訂單編號</th><th>顧客</th><th>電話</th><th>品名</th><th>SN</th><th>狀態</th><th>操作</th>
               </tr>
             </thead>
@@ -124,7 +124,7 @@ export function TodoPage() {
                     <td data-label={tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'} className="nowrap">
                       {start ? fmtDate(taipeiDay(start)) : '—'}
                     </td>
-                    <td data-label="已等" className="nowrap"><span className={overdue ? 'overdue-days' : ''}>{days} 天</span></td>
+                    <td data-label="等待時間" className="nowrap"><span className={overdue ? 'overdue-days' : ''}>{days} 天</span></td>
                     <td data-label="訂單編號" className="nowrap"><Link to={`/orders/${r.order_id}`}>{r.order_no}</Link></td>
                     <td data-label="顧客" className="nowrap">{r.customer_name}</td>
                     <td data-label="電話" className="nowrap">{r.customer_phone}</td>
