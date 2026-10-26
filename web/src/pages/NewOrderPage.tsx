@@ -257,7 +257,7 @@ export function NewOrderPage() {
         <aside className="card stack summary">
           <h2>摘要</h2>
           <dl>
-            <dt>顧客</dt><dd>{h.customer_name || '—'}</dd>
+            <dt>顧客</dt><dd>{h.customer_name ? <span className="customer-name">{h.customer_name}</span> : '—'}</dd>
             <dt>單據日期</dt><dd>{fmtDate(h.purchase_date)}</dd>
             <dt>預結號碼</dt><dd>{h.receipt_no || '—'}</dd>
             <dt>機號</dt><dd>{h.register_no || '—'}</dd>

@@ -93,7 +93,7 @@ export function OrderDetailPage() {
           )}
         </div>
         <dl className="grid-dl">
-          <dt>顧客</dt><dd>{o.customer_name}</dd>
+          <dt>顧客</dt><dd><span className="customer-name">{o.customer_name}</span></dd>
           <dt>電話</dt><dd>{o.customer_phone}</dd>
           <dt>結帳日期</dt><dd>{fmtDate(o.purchase_date)}</dd>
           <dt>收銀機號／序號</dt><dd>{o.register_no}／{o.receipt_seq}</dd>
