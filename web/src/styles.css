@@ -200,3 +200,7 @@ button.link.text-notify { color: #dc6803; }
 button.link.text-deliver { color: #1b7f3b; }
 /* 已貼勾選框與「已貼」按鈕同色 */
 td[data-label='已貼'] input[type='checkbox'] { accent-color: #7a5af8; }
+/* 列表裡的操作按鈕縮小成與狀態標籤同高，行與行之間留空 */
+.item-lines > div { display: flex; align-items: center; gap: 6px; }
+.item-lines > div + div { margin-top: 4px; }
+.item-lines button.step { min-height: 0; padding: 2px 8px; font-size: 0.8rem; line-height: 1.4; border-radius: 999px; }
