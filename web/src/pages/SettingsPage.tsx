@@ -4,7 +4,7 @@ import { useAuth, useMe } from '../auth/AuthProvider';
 import { ALLOWED_EMAIL_DOMAIN } from '../lib/clients';
 import { adminCreateUser, catalogCount, listAdminAudit, listExportLogs, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
 import { fmtDateTime } from '../lib/format';
-import { ACTION_LABEL, FIELD_LABEL, ROLE_LABEL } from '../lib/labels';
+import { ACTION_LABEL, FIELD_LABEL, ROLE_LABEL, errorMessage } from '../lib/labels';
 import type { Profile, Role, Store } from '../lib/types';
 import { Dialog, ErrorBanner, useAsync } from '../components/ui';
 
@@ -104,12 +104,16 @@ type UserRow = Profile & { stores: string[] };
 
 function UsersSection({ users, stores, error, onSaved }: { users: UserRow[]; stores: Store[]; error: unknown; onSaved: () => void }) {
   const [creating, setCreating] = useState(false);
+  const [batch, setBatch] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
   return (
     <section className="card stack">
       <div className="row between">
         <h2>帳號</h2>
-        <button className="secondary" onClick={() => setCreating(true)}>＋ 開通帳號</button>
+        <div className="row gap">
+          <button className="secondary" onClick={() => setBatch(true)}>批次開通</button>
+          <button className="secondary" onClick={() => setCreating(true)}>＋ 開通帳號</button>
+        </div>
       </div>
       <ErrorBanner error={error} />
       <div className="table-wrap">
@@ -130,6 +134,7 @@ function UsersSection({ users, stores, error, onSaved }: { users: UserRow[]; sto
         </table>
       </div>
       {creating && <CreateUserDialog stores={stores} onClose={() => setCreating(false)} onSaved={onSaved} />}
+      {batch && <BatchCreateDialog stores={stores} existing={users.map((u) => u.email.toLowerCase())} onClose={() => setBatch(false)} onSaved={onSaved} />}
       {editing && <EditUserDialog user={editing} stores={stores} onClose={() => setEditing(null)} onSaved={onSaved} />}
     </section>
   );
@@ -364,5 +369,75 @@ function ExportLogSection() {
         })}
       </ul>
     </section>
+  );
+}
+
+// 批次開通：貼上多個 Email（一行一個或用逗號分隔），同一角色與門市，逐一開通並顯示每筆結果
+function BatchCreateDialog({ stores, existing, onClose, onSaved }: {
+  stores: Store[]; existing: string[]; onClose: () => void; onSaved: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [role, setRole] = useState<Role>('staff');
+  const [storeCodes, setStoreCodes] = useState<string[]>(stores.length === 1 ? [stores[0].code] : []);
+  const [results, setResults] = useState<{ email: string; ok: boolean; message: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const emails = [...new Set(text.split(/[\s,;，、]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  const invalid = emails.filter((e) => !e.endsWith(`@${ALLOWED_EMAIL_DOMAIN}`) || !/^[^@\s]+@[^@\s]+$/.test(e));
+  const already = emails.filter((e) => existing.includes(e));
+  const todo = emails.filter((e) => !invalid.includes(e) && !already.includes(e));
+
+  async function run() {
+    setBusy(true);
+    const out: typeof results = [];
+    for (const email of todo) {
+      try {
+        await adminCreateUser({ email, display_name: '', role, store_codes: role === 'admin' ? [] : storeCodes });
+        out.push({ email, ok: true, message: '已開通' });
+      } catch (e) {
+        out.push({ email, ok: false, message: errorMessage(e) });
+      }
+      setResults([...out]);
+    }
+    setBusy(false);
+    onSaved();
+  }
+
+  const done = results.length > 0 && !busy;
+  return (
+    <Dialog title="批次開通帳號" onClose={onClose}>
+      <div className="stack">
+        <label>Email（一行一個，或用逗號分隔）
+          <textarea rows={6} value={text} disabled={busy || done} onChange={(e) => setText(e.target.value)}
+            placeholder={`name@${ALLOWED_EMAIL_DOMAIN}`} />
+        </label>
+        <label>角色
+          <select value={role} disabled={busy || done} onChange={(e) => setRole(e.target.value as Role)}>
+            {(['staff', 'manager', 'admin'] as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+          </select>
+        </label>
+        {role !== 'admin' && <StorePicker stores={stores} value={storeCodes} onChange={setStoreCodes} />}
+        {emails.length > 0 && !done && (
+          <div className="small">
+            將開通 {todo.length} 個帳號，顯示名稱自動使用 Email @ 前段。
+            {already.length > 0 && <div className="muted">已存在、略過：{already.join('、')}</div>}
+            {invalid.length > 0 && <div className="danger-text">不是 @{ALLOWED_EMAIL_DOMAIN} 的 Email、略過：{invalid.join('、')}</div>}
+          </div>
+        )}
+        {results.length > 0 && (
+          <ul className="plain small">
+            {results.map((r) => <li key={r.email} className={r.ok ? 'ok-text' : 'danger-text'}>{r.ok ? '✓' : '✗'} {r.email}：{r.message}</li>)}
+          </ul>
+        )}
+        <div className="row gap end">
+          <button className="secondary" onClick={onClose} disabled={busy}>{done ? '關閉' : '取消'}</button>
+          {!done && (
+            <button disabled={busy || !todo.length || (role !== 'admin' && !storeCodes.length)} onClick={run}>
+              {busy ? `開通中…（${results.length}/${todo.length}）` : `開通 ${todo.length} 個帳號`}
+            </button>
+          )}
+        </div>
+      </div>
+    </Dialog>
   );
 }
