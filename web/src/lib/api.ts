@@ -2,7 +2,7 @@
 import { supabase } from './clients';
 import type { OcrWord } from './ocrLayout';
 import type { CatalogEntry } from './catalogMatch';
-import type { AuditLog, BacklogRow, Device, Me, Notification, OrderItem, OrderSummary, Profile, Store, UserStore } from './types';
+import type { AuditLog, BacklogRow, TodoRow, Device, Me, Notification, OrderItem, OrderSummary, Profile, Store, UserStore } from './types';
 
 export class ApiError extends Error {
   constructor(public code: string, public detail = '') {
@@ -104,6 +104,15 @@ export async function devicesForOrders(orderIds: string[]) {
   if (!orderIds.length) return [] as Device[];
   return unwrap(await supabase.from('devices').select('*').in('order_id', orderIds).neq('status', 'cancelled')
     .order('unit_no')) as Device[];
+}
+
+// 待辦清單：未完成的機器（每台一列）
+export async function listTodo(opts: { storeCode?: string; q?: string }) {
+  let query = supabase.from('v_device_todo').select('*').limit(1000);
+  if (opts.storeCode) query = query.eq('store_code', opts.storeCode);
+  const q = (opts.q ?? '').replace(/[,()*%\\]/g, ' ').trim();
+  if (q) query = query.or(`model.ilike.*${q}*,full_product_name.ilike.*${q}*,customer_name.ilike.*${q}*,order_no.ilike.*${q}*`);
+  return unwrap(await query) as TodoRow[];
 }
 
 export async function loadOrder(orderId: string) {

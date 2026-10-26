@@ -6,10 +6,10 @@ import { ErrorBanner, useAsync } from '../components/ui';
 import { OrderTable } from './OrdersPage';
 
 const TILES = [
-  { key: 'pending_arrival', label: '待到貨' },
-  { key: 'arrived_pending_notify', label: '待通知' },
-  { key: 'pending_label', label: '待貼' },
-  { key: 'notified_pending_pickup', label: '待取貨' },
+  { key: 'pending_arrival', label: '待到貨', tab: 'arrival' },
+  { key: 'arrived_pending_notify', label: '待通知', tab: 'notify' },
+  { key: 'pending_label', label: '待貼', tab: 'label' },
+  { key: 'notified_pending_pickup', label: '待取貨', tab: 'pickup' },
   { key: 'delivered', label: '已交付', stat: true },
 ];
 
@@ -33,14 +33,19 @@ export function HomePage() {
 
       <ErrorBanner error={counts.error} />
       <section className="tiles">
-        {TILES.map((t) => (
-          <div key={t.key} className={`tile ${t.stat ? 'stat' : ''}`}>
-            <div className="tile-num">{counts.loading ? '…' : counts.data?.[t.key] ?? 0}</div>
-            <div className="tile-label">{t.label}{t.stat ? '（統計）' : ''}</div>
-          </div>
-        ))}
+        {TILES.map((t) => {
+          const body = (
+            <>
+              <div className="tile-num">{counts.loading ? '…' : counts.data?.[t.key] ?? 0}</div>
+              <div className="tile-label">{t.label}{t.stat ? '（統計）' : ''}</div>
+            </>
+          );
+          return t.tab
+            ? <Link key={t.key} to={`/todo${t.tab === 'arrival' ? '' : `?tab=${t.tab}`}`} className="tile tile-link">{body}</Link>
+            : <div key={t.key} className="tile stat">{body}</div>;
+        })}
       </section>
-      <p className="muted small">數字依每台機器的實際狀態即時計算，不含已取消與已取走／不追蹤。點擊進入篩選清單為第三階段功能。</p>
+      <p className="muted small">數字依每台機器的實際狀態即時計算，不含已取消。點數字可進入待辦清單。</p>
 
       <section className="stack">
         <div className="row between">

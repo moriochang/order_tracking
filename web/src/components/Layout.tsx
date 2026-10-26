@@ -13,7 +13,7 @@ export function Layout() {
           <NavLink to="/" end>首頁</NavLink>
           <NavLink to="/orders/new">新增訂單</NavLink>
           <NavLink to="/orders" end>訂單查詢</NavLink>
-          <span className="nav-disabled" title="第三階段開放">待辦清單</span>
+          <NavLink to="/todo">待辦清單</NavLink>
           {me.role === 'admin' && <NavLink to="/settings">設定</NavLink>}
         </nav>
         <div className="who">

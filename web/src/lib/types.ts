@@ -79,6 +79,29 @@ export type BacklogRow = {
   excluded: number;
 };
 
+export type TodoRow = {
+  device_id: string;
+  order_id: string;
+  order_item_id: string;
+  unit_no: number;
+  sn: string | null;
+  status: DeviceStatus;
+  is_labeled: boolean;
+  arrived_at: string | null;
+  last_notified_at: string | null;
+  note: string | null;
+  version: number;
+  full_product_name: string;
+  model: string | null;
+  barcode: string | null;
+  order_no: string;
+  store_code: string;
+  customer_name: string;
+  customer_phone: string;
+  purchase_date: string;
+  order_created_at: string;
+};
+
 export type OrderItem = {
   id: string;
   order_id: string;
