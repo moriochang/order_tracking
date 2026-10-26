@@ -289,16 +289,37 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="機號">{o.register_no}</td>
                 <td data-label="序號">{o.receipt_seq}</td>
                 <td data-label="預結號碼">{o.receipt_no ?? '—'}</td>
-                <td data-label="商品明細">
+                {/* 手機：每台一張小卡片，品名、狀態、操作放在一起 */}
+                <td data-label="" className="mobile-only">
+                  {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : (
+                    <div className="unit-cards">
+                      {lines.map((l) => (
+                        <div key={l.device.id} className={`unit-card unit-${l.device.status}`}>
+                          <div className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</div>
+                          <div className="row gap wrap">
+                            <StatusBadge status={l.device.status} />
+                            {stepsOf(l.device).map((step) => (
+                              <button key={step} type="button" className={`step step-${step}`}
+                                onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
+                                {STEP_LABEL[step]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td data-label="商品明細" className="desk-only">
                   {cell((l) => (
                     <span className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</span>
                   ))}
                 </td>
-                <td data-label="數量">{cell(() => 1)}</td>
-                <td data-label="狀態">
+                <td data-label="數量" className="desk-only">{cell(() => 1)}</td>
+                <td data-label="狀態" className="desk-only">
                   {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : cell((l) => <StatusBadge status={l.device.status} />)}
                 </td>
-                <td data-label="操作">
+                <td data-label="操作" className="desk-only">
                   {cell((l) => stepsOf(l.device).map((step) => (
                     <button key={step} type="button" className={`step step-${step}`}
                       onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
@@ -306,7 +327,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                     </button>
                   )))}
                 </td>
-                <td data-label="備註" className="clip">{o.order_note ?? ''}</td>
+                <td data-label="備註" className={`clip ${o.order_note ? '' : 'desk-only'}`}>{o.order_note ?? ''}</td>
               </tr>
             );
           })}

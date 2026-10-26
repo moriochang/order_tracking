@@ -228,3 +228,19 @@ td[data-label='已貼'] input[type='checkbox'] { accent-color: #7a5af8; }
   .filter-bar .input-group { flex-basis: 100%; max-width: none; }
   .filter-bar button[type='submit'] { flex: 1 1 100%; }
 }
+/* 手機與電腦各自顯示的欄位 */
+td.mobile-only { display: none; }
+@media (max-width: 799px) {
+  table.list td.desk-only { display: none; }
+  table.list td.mobile-only { display: block; padding-top: 6px; }
+  .unit-cards { display: flex; flex-direction: column; gap: 8px; }
+  .unit-card { border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 8px; padding: 8px 10px; background: var(--inset); }
+  .unit-card .product-name { margin-bottom: 6px; }
+  .unit-card button.step { min-height: 34px; padding: 4px 12px; font-size: 0.9rem; border-radius: 999px; }
+}
+@media (max-width: 799px) {
+  .unit-pending_arrival { border-left-color: #98a2b3; }
+  .unit-arrived_pending_notify { border-left-color: #dc6803; }
+  .unit-notified_pending_pickup { border-left-color: #1f5fbf; }
+  .unit-delivered { border-left-color: #1b7f3b; }
+}
