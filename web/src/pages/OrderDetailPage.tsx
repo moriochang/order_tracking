@@ -7,8 +7,8 @@ import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL } from '.
 import type { Device, OrderItem } from '../lib/types';
 import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
 import { AuditTimeline } from '../components/AuditTimeline';
-import { AddItemDialog, ChangeQtyDialog, EditItemDialog, EditOrderDialog, MergeItemDialog } from '../components/OrderDialogs';
-import { sameProduct } from '../components/ItemEditor';
+import { AddItemDialog, EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
+import { unitNumbers } from '../lib/units';
 import { OrderProgress } from './OrdersPage';
 import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, DeviceNoteDialog, NotifyDialog } from '../components/DeviceDialogs';
 
@@ -17,9 +17,6 @@ type Modal =
   | { kind: 'cancel_order' }
   | { kind: 'add_item' }
   | { kind: 'edit_item'; item: OrderItem }
-  | { kind: 'qty'; item: OrderItem }
-  | { kind: 'cancel_item'; item: OrderItem }
-  | { kind: 'merge'; item: OrderItem; target: OrderItem }
   | { kind: 'cancel_device'; device: Device; item: OrderItem }
   | { kind: 'arrival' | 'notify' | 'deliver' | 'note' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
 
@@ -51,15 +48,13 @@ export function OrderDetailPage() {
   const close = () => setModal(null);
   const reload = data.reload;
   const itemById = new Map(d.items.map((i) => [i.id, i]));
-  const deliveredOf = (itemId: string) => d.devices.filter((x) => x.order_item_id === itemId && x.status === 'delivered').length;
   const lastSuccess = (deviceId: string) => d.notifications.find((n) => n.device_id === deviceId && n.is_success);
-  const unitName = (dev: Device) => { const it = itemById.get(dev.order_item_id)!; return `${it.line_no}-${dev.unit_no} ${it.full_product_name}${dev.sn ? `（${dev.sn}）` : ''}`; };
+  // 單機一律依流水號 1、2、3… 顯示，同一商品一次訂多台或分開加入都一樣
+  const unitNo = unitNumbers(d.items, d.devices);
+  const units = [...d.devices].sort((a, b) => unitNo.get(a.id)! - unitNo.get(b.id)!);
+  const unitName = (dev: Device) => `${unitNo.get(dev.id)}. ${itemById.get(dev.order_item_id)!.full_product_name}${dev.sn ? `（${dev.sn}）` : ''}`;
+  const unitsOfItem = (itemId: string) => d.devices.filter((x) => x.order_item_id === itemId && x.status !== 'cancelled').length;
   const isManager = me.role === 'manager' || me.role === 'admin';
-  // 前面已有相同商品、且這項的機器都還待到貨時，可以合併過去
-  const mergeTargetOf = (it: OrderItem) => (it.cancelled_at
-    || d.devices.some((x) => x.order_item_id === it.id && !['pending_arrival', 'cancelled'].includes(x.status))
-    ? undefined
-    : d.items.find((t) => t.line_no < it.line_no && !t.cancelled_at && sameProduct(t, it)));
 
   async function toggleLabeled(dev: Device) {
     setOpError(null);
@@ -114,30 +109,38 @@ export function OrderDetailPage() {
           <h2>商品明細</h2>
           {active && <button className="secondary" onClick={() => setModal({ kind: 'add_item' })}>＋ 新增商品</button>}
         </div>
-        {d.items.map((it) => (
-          <div key={it.id} className={`draft-item ${it.cancelled_at ? 'dim' : ''}`}>
-            <div className="grow">
-              <div className="product-name">{it.line_no}. {it.full_product_name}</div>
-              <div className="small muted">
-                {[it.barcode && `條碼 ${it.barcode}`, it.model].filter(Boolean).join('・')}
-                {' '}訂購 {it.ordered_qty} 台・已交付 {deliveredOf(it.id)} 台
-                {it.source === 'ocr' && '・掃描匯入'}
+        {units.filter((dev) => dev.status !== 'cancelled').map((dev) => {
+          const it = itemById.get(dev.order_item_id)!;
+          return (
+            <div key={dev.id} className="draft-item">
+              <div className="grow">
+                <div className="product-name">{unitNo.get(dev.id)}. {it.full_product_name}</div>
+                <div className="small muted">
+                  {[it.model, it.barcode && `條碼 ${it.barcode}`, it.source === 'ocr' && '掃描匯入'].filter(Boolean).join('・')}
+                </div>
+                {it.item_note && <div className="small">備註：{it.item_note}</div>}
               </div>
-              {it.item_note && <div className="small">備註：{it.item_note}</div>}
-              {it.cancelled_at && <div className="small danger-text">已取消：{it.cancellation_reason}</div>}
+              {active && (
+                <div className="row gap wrap">
+                  <button className="link" onClick={() => setModal({ kind: 'edit_item', item: it })}>修改</button>
+                  {dev.status !== 'delivered' && (
+                    <button className="link danger-text" onClick={() => setModal({ kind: 'cancel_device', device: dev, item: it })}>取消</button>
+                  )}
+                </div>
+              )}
             </div>
-            {active && !it.cancelled_at && (
-              <div className="row gap wrap">
-                <button className="link" onClick={() => setModal({ kind: 'edit_item', item: it })}>修改</button>
-                <button className="link" onClick={() => setModal({ kind: 'qty', item: it })}>修改數量</button>
-                {mergeTargetOf(it) && (
-                  <button className="link" onClick={() => setModal({ kind: 'merge', item: it, target: mergeTargetOf(it)! })}>合併到第 {mergeTargetOf(it)!.line_no} 項</button>
-                )}
-                <button className="link danger-text" onClick={() => setModal({ kind: 'cancel_item', item: it })}>取消</button>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
+        {units.some((dev) => dev.status === 'cancelled') && (
+          <details className="small">
+            <summary>已取消 {units.filter((dev) => dev.status === 'cancelled').length} 台</summary>
+            <ul className="plain">
+              {units.filter((dev) => dev.status === 'cancelled').map((dev) => (
+                <li key={dev.id} className="dim">{unitName(dev)}・{dev.cancellation_reason}</li>
+              ))}
+            </ul>
+          </details>
+        )}
         {d.scans.map((s) => (
           <details key={s.id} className="small">
             <summary>掃描原文（{fmtDateTime(s.created_at)}）</summary>
@@ -155,15 +158,12 @@ export function OrderDetailPage() {
               <tr><th>單機</th><th>商品</th><th>SN</th><th>狀態</th><th>已通知</th><th>已貼</th><th>到貨</th><th>交付</th><th>下一步</th><th></th></tr>
             </thead>
             <tbody>
-              {d.devices
-                .slice()
-                .sort((a, b) => (itemById.get(a.order_item_id)!.line_no - itemById.get(b.order_item_id)!.line_no) || a.unit_no - b.unit_no)
-                .map((dev) => {
+              {units.map((dev) => {
                   const it = itemById.get(dev.order_item_id)!;
                   const notified = lastSuccess(dev.id);
                   return (
                     <tr key={dev.id} className={dev.status === 'cancelled' ? 'dim' : ''}>
-                      <td data-label="單機">{it.line_no}-{dev.unit_no}</td>
+                      <td data-label="單機">{unitNo.get(dev.id)}</td>
                       <td data-label="商品">
                         <span className="product-name">{it.full_product_name}</span>
                         {dev.note && <div className="small">備註：{dev.note}</div>}
@@ -255,10 +255,10 @@ export function OrderDetailPage() {
       </section>
 
       {modal?.kind === 'edit_order' && <EditOrderDialog order={o} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'note' && <DeviceNoteDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'note' && <DeviceNoteDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'notify' && (
         <NotifyDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload}
           others={d.devices
@@ -272,21 +272,14 @@ export function OrderDetailPage() {
           onConfirm={async (reason) => { await rpc('correct_device_status', { p_device_id: modal.device.id, p_expected_version: modal.device.version, p_reason: reason }); reload(); }} />
       )}
       {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} items={d.items} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'merge' && <MergeItemDialog source={modal.item} target={modal.target} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'qty' && <ChangeQtyDialog item={modal.item} devices={d.devices} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} unitCount={unitsOfItem(modal.item.id)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'cancel_order' && (
         <ReasonDialog title="取消整張訂單" danger confirmLabel="確認取消訂單" onClose={close}
           description={<p>將取消此訂單所有尚未交付的 {o.device_total} 台機器。已交付的機器存在時無法整筆取消。紀錄會保留，不會刪除。</p>}
           onConfirm={async (reason) => { await rpc('cancel_order', { p_order_id: o.id, p_expected_version: o.version, p_reason: reason }); reload(); }} />
       )}
-      {modal?.kind === 'cancel_item' && (
-        <ReasonDialog title={`取消商品 ${modal.item.line_no}`} danger confirmLabel="確認取消商品" onClose={close}
-          description={<p className="product-name">{modal.item.full_product_name} × {modal.item.ordered_qty} 台</p>}
-          onConfirm={async (reason) => { await rpc('cancel_order_item', { p_item_id: modal.item.id, p_expected_version: modal.item.version, p_reason: reason }); reload(); }} />
-      )}
       {modal?.kind === 'cancel_device' && (
-        <ReasonDialog title={`取消單機 ${modal.item.line_no}-${modal.device.unit_no}`} danger confirmLabel="確認取消這台" onClose={close}
+        <ReasonDialog title={`取消單機 ${unitNo.get(modal.device.id)}`} danger confirmLabel="確認取消這台" onClose={close}
           description={<p>{modal.item.full_product_name}。取消後此商品數量減 1；若是最後一台，商品（及訂單）會一併取消。</p>}
           onConfirm={async (reason) => { await rpc('cancel_device', { p_device_id: modal.device.id, p_expected_version: modal.device.version, p_reason: reason }); reload(); }} />
       )}

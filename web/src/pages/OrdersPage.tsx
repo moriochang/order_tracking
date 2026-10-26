@@ -101,17 +101,29 @@ function BacklogTable({ rows }: { rows: BacklogRow[] }) {
 // 商品各狀態台數（只列有台數的狀態）
 const ITEM_STATUSES = ['pending_arrival', 'arrived_pending_notify', 'notified_pending_pickup', 'delivered', 'excluded'] as const;
 
+// 同一張訂單裡相同商品（一次訂多台或分開加入）合併為一列，數量與各狀態台數相加
+function groupByProduct(rows: BacklogRow[]): BacklogRow[] {
+  const out: BacklogRow[] = [];
+  for (const r of rows) {
+    const g = out.find((x) => x.full_product_name === r.full_product_name && x.model === r.model && x.barcode === r.barcode);
+    if (!g) { out.push({ ...r }); continue; }
+    g.ordered_qty += r.ordered_qty;
+    for (const s of ITEM_STATUSES) g[s] += r[s];
+  }
+  return out;
+}
+
 export function OrderTable({ orders }: { orders: OrderSummary[] }) {
   const ids = orders.map((o) => o.id);
   const items = useAsync(() => itemsForOrders(ids), [ids.join(',')]);
-  const itemsOf = (orderId: string) => (items.data ?? []).filter((i) => i.order_id === orderId);
+  const itemsOf = (orderId: string) => groupByProduct((items.data ?? []).filter((i) => i.order_id === orderId));
   return (
     <div className="table-wrap">
       <table className="list">
         <thead>
           <tr>
             <th>訂單編號</th><th>顧客</th><th>電話</th><th>結帳日期</th><th>機號</th><th>序號</th><th>預結號碼</th>
-            <th>商品明細</th><th>狀態</th><th>備註</th>
+            <th>商品明細</th><th>數量</th><th>狀態</th><th>備註</th>
           </tr>
         </thead>
         <tbody>
@@ -127,7 +139,14 @@ export function OrderTable({ orders }: { orders: OrderSummary[] }) {
               <td data-label="商品明細">
                 {o.order_status === 'cancelled' ? '—' : (
                   <div className="item-lines">
-                    {itemsOf(o.id).map((i) => <div key={i.item_id} className="product-name">{i.full_product_name} × {i.ordered_qty}</div>)}
+                    {itemsOf(o.id).map((i) => <div key={i.item_id} className="product-name">{i.full_product_name}</div>)}
+                  </div>
+                )}
+              </td>
+              <td data-label="數量">
+                {o.order_status === 'cancelled' ? '—' : (
+                  <div className="item-lines">
+                    {itemsOf(o.id).map((i) => <div key={i.item_id}>{i.ordered_qty}</div>)}
                   </div>
                 )}
               </td>

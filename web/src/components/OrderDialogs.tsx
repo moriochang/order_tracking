@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { ApiError, rpc } from '../lib/api';
 import { todayTaipei } from '../lib/format';
-import { FIELD_LABEL, STATUS_LABEL } from '../lib/labels';
-import type { Device, OrderItem, OrderSummary } from '../lib/types';
+import { FIELD_LABEL } from '../lib/labels';
+import type { OrderItem, OrderSummary } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
 import { CatalogNameHint, ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem, sameProduct, useModelNameSuggest } from './ItemEditor';
 
@@ -117,12 +117,12 @@ export function AddItemDialog({ orderId, items, onClose, onSaved }: {
       <div className="stack">
         <ItemEditor value={item} onChange={setItem} />
         {problems.map((p) => <div key={p} className="small danger-text">・{p}</div>)}
-        {twin && <div className="alert info small">此訂單第 {twin.line_no} 項是相同商品，將合併為同一項：{twin.ordered_qty} 台 → {twin.ordered_qty + add} 台。</div>}
+        {twin && <div className="alert info small">此訂單已有相同商品 {twin.ordered_qty} 台，將一起記錄為 {twin.ordered_qty + add} 台。</div>}
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>
           <button disabled={busy || problems.length > 0} onClick={() => run(submit)}>
-            {busy ? '處理中…' : twin ? `合併到第 ${twin.line_no} 項（+${add} 台）` : `新增 ${add} 台`}
+            {busy ? '處理中…' : `新增 ${add} 台`}
           </button>
         </div>
       </div>
@@ -132,7 +132,9 @@ export function AddItemDialog({ orderId, items, onClose, onSaved }: {
 
 const ITEM_FIELDS = ['model', 'barcode', 'full_product_name', 'item_note'] as const;
 
-export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; onClose: () => void; onSaved: () => void }) {
+export function EditItemDialog({ item, unitCount = 1, onClose, onSaved }: {
+  item: OrderItem; unitCount?: number; onClose: () => void; onSaved: () => void;
+}) {
   const [form, setForm] = useState(() => Object.fromEntries(ITEM_FIELDS.map((f) => [f, item[f] ?? ''])) as Record<string, string>);
   const [reason, setReason] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
@@ -141,8 +143,9 @@ export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; on
   const { names, pick } = useModelNameSuggest(form.model, form.full_product_name, (n) => setForm((p) => ({ ...p, full_product_name: n })));
 
   return (
-    <Dialog title={`修改商品 ${item.line_no}`} onClose={onClose}>
+    <Dialog title="修改商品" onClose={onClose}>
       <div className="stack">
+        {unitCount > 1 && <div className="alert info small">這筆商品共 {unitCount} 台是一起建立的，修改會套用到這 {unitCount} 台。</div>}
         {ITEM_FIELDS.map((f) => (
           <div key={f} className="stack tight">
             <label>{FIELD_LABEL[f]}
@@ -155,7 +158,6 @@ export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; on
           </div>
         ))}
         <label>修改原因（選填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
-        <p className="small muted">數量請使用「修改數量」。</p>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>
@@ -169,74 +171,3 @@ export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; on
   );
 }
 
-// 合併相同商品：來源項目的待到貨機器併入目標項目，來源整項取消
-export function MergeItemDialog({ source, target, onClose, onSaved }: {
-  source: OrderItem; target: OrderItem; onClose: () => void; onSaved: () => void;
-}) {
-  const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
-  return (
-    <Dialog title="合併相同商品" onClose={onClose}>
-      <div className="stack">
-        <p className="product-name">{source.full_product_name}</p>
-        <p>第 {source.line_no} 項（{source.ordered_qty} 台）併入第 {target.line_no} 項：{target.ordered_qty} 台 → {target.ordered_qty + source.ordered_qty} 台。</p>
-        <p className="small muted">第 {source.line_no} 項會標示為「已取消：合併到第 {target.line_no} 項」，紀錄會保留。</p>
-        <ErrorBanner error={error} />
-        <div className="row gap end">
-          <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy} onClick={() => run(() => rpc('merge_order_items', { p_source_item_id: source.id, p_target_item_id: target.id }))}>
-            {busy ? '合併中…' : '確認合併'}
-          </button>
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-
-export function ChangeQtyDialog({ item, devices, onClose, onSaved }: {
-  item: OrderItem; devices: Device[]; onClose: () => void; onSaved: () => void;
-}) {
-  const [qty, setQty] = useState(item.ordered_qty);
-  const [picked, setPicked] = useState<string[]>([]);
-  const [reason, setReason] = useState('');
-  const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
-  const decrease = item.ordered_qty - qty;
-  const cancellable = devices.filter((d) => d.order_item_id === item.id && ['pending_arrival', 'excluded'].includes(d.status));
-
-  return (
-    <Dialog title={`修改數量：商品 ${item.line_no}`} onClose={onClose}>
-      <div className="stack">
-        <div className="product-name">{item.full_product_name}</div>
-        <label>新數量（目前 {item.ordered_qty} 台）
-          <input type="number" min={1} max={999} value={qty} onChange={(e) => { setQty(Math.max(1, Math.floor(Number(e.target.value) || 1))); setPicked([]); }} />
-        </label>
-        {qty > item.ordered_qty && <p className="small">將新增 {qty - item.ordered_qty} 台「待到貨」單機。</p>}
-        {decrease > 0 && (
-          <fieldset>
-            <legend>請勾選要取消的 {decrease} 台（只能選待到貨或已取走）</legend>
-            {cancellable.length < decrease && <p className="small danger-text">可取消的機器不足；已到貨的機器請用單機「取消」。</p>}
-            {cancellable.map((d) => (
-              <label key={d.id} className="radio">
-                <input type="checkbox" checked={picked.includes(d.id)}
-                  disabled={!picked.includes(d.id) && picked.length >= decrease}
-                  onChange={(e) => setPicked((p) => (e.target.checked ? [...p, d.id] : p.filter((x) => x !== d.id)))} />
-                第 {d.unit_no} 台・{STATUS_LABEL[d.status]}
-              </label>
-            ))}
-          </fieldset>
-        )}
-        <label>原因（必填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
-        <ErrorBanner error={error} />
-        <div className="row gap end">
-          <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy || qty === item.ordered_qty || !reason.trim() || (decrease > 0 && picked.length !== decrease)}
-            onClick={() => run(() => rpc('change_item_quantity', {
-              p_item_id: item.id, p_expected_version: item.version, p_new_qty: qty,
-              p_cancel_device_ids: decrease > 0 ? picked : [], p_reason: reason.trim(),
-            }))}>
-            {busy ? '處理中…' : '確認修改'}
-          </button>
-        </div>
-      </div>
-    </Dialog>
-  );
-}

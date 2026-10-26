@@ -43,7 +43,6 @@ export const ACTION_LABEL: Record<string, string> = {
   system_migration: '系統調整',
   admin_import_catalog: '匯入產品資料',
   update_device_note: '單機備註',
-  merge_order_items: '合併商品',
   direct_db_change: '⚠ 未經系統流程的資料庫修改',
 };
 
@@ -85,7 +84,7 @@ export const FIELD_LABEL: Record<string, string> = {
 export const AUDIT_FILTERS: { key: string; label: string; actions: string[] }[] = [
   { key: 'all', label: '全部異動', actions: [] },
   { key: 'order', label: '訂單資料', actions: ['create_order', 'update_order_info'] },
-  { key: 'item', label: '商品／SN', actions: ['add_order_item', 'update_order_item', 'change_item_quantity', 'merge_order_items', 'correct_sn', 'update_device_note'] },
+  { key: 'item', label: '商品／SN', actions: ['add_order_item', 'update_order_item', 'change_item_quantity', 'correct_sn', 'update_device_note'] },
   { key: 'arrival', label: '到貨', actions: ['register_arrival'] },
   { key: 'notify', label: '通知', actions: ['record_notification'] },
   { key: 'label', label: '貼標', actions: ['set_labeled'] },
@@ -131,8 +130,6 @@ const ERROR_MESSAGE: Record<string, string> = {
   DUPLICATE: '資料重複，例如預結號碼開頭已被其他門市使用。',
   SN_REQUIRED: '請輸入 SN。',
   LABEL_NOT_ALLOWED: '只有已到貨、尚未交付的機器可以標記已貼。',
-  NOT_SAME_PRODUCT: '兩項商品的品名、型號、條碼或備註不同，不能合併。',
-  MERGE_NOT_ALLOWED: '這一項已有機器到貨或交付，不能合併。',
   NETWORK: '網路或伺服器錯誤，操作可能未完成，請重新載入確認。',
 };
 

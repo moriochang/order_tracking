@@ -5,11 +5,11 @@ import { compressImage } from '../lib/image';
 import { linesFromWords } from '../lib/ocrLayout';
 import { extractSerials, looksLikeSn, normalizeSn } from '../lib/serial';
 import { METHOD_LABEL, OUTCOME_LABEL } from '../lib/labels';
-import type { Device, OrderItem } from '../lib/types';
+import type { Device } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
 import { useSubmit } from './OrderDialogs';
 
-type Props = { device: Device; item: OrderItem; onClose: () => void; onSaved: () => void };
+type Props = { device: Device; label: string; onClose: () => void; onSaved: () => void };
 
 // SN 輸入：可手動輸入或拍包裝盒標籤辨識；英文 O 自動改為 0
 function SnInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
@@ -72,15 +72,14 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
   );
 }
 
-const unitLabel = (item: OrderItem, device: Device) => `${item.line_no}-${device.unit_no} ${item.full_product_name}`;
 
-export function ArrivalDialog({ device, item, onClose, onSaved }: Props) {
+export function ArrivalDialog({ device, label, onClose, onSaved }: Props) {
   const [sn, setSn] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
     <Dialog title="登記到貨" onClose={onClose}>
       <div className="stack">
-        <p className="product-name">{unitLabel(item, device)}</p>
+        <p className="product-name">{label}</p>
         <SnInput label="SN（配件沒有 SN 可留空）" value={sn} onChange={setSn} />
         <p className="small muted">可拍包裝盒標籤自動辨識，辨識後請與標籤核對。系統會檢查 SN 是否已登記在其他機器。</p>
         <ErrorBanner error={error} />
@@ -142,13 +141,13 @@ export function NotifyDialog({ device, others, label, onClose, onSaved }: {
   );
 }
 
-export function DeliveryDialog({ device, item, onClose, onSaved }: Props) {
+export function DeliveryDialog({ device, label, onClose, onSaved }: Props) {
   const [note, setNote] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
     <Dialog title="完成交付" onClose={onClose}>
       <div className="stack">
-        <p className="product-name">{unitLabel(item, device)}</p>
+        <p className="product-name">{label}</p>
         {device.sn ? <p>SN：<strong>{device.sn}</strong>（請與實機核對）</p> : <p className="small muted">這台沒有登記 SN。</p>}
         {device.status === 'arrived_pending_notify' && <p className="small muted">這台尚未通知，交付時會自動記一筆「顧客到店」通知。</p>}
         <label>交付備註（選填）<input value={note} placeholder="例：本人取貨、代領人姓名" onChange={(e) => setNote(e.target.value)} /></label>
@@ -165,13 +164,13 @@ export function DeliveryDialog({ device, item, onClose, onSaved }: Props) {
   );
 }
 
-export function DeviceNoteDialog({ device, item, onClose, onSaved }: Props) {
+export function DeviceNoteDialog({ device, label, onClose, onSaved }: Props) {
   const [note, setNote] = useState(device.note ?? '');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
     <Dialog title="單機備註" onClose={onClose}>
       <div className="stack">
-        <p className="product-name">{unitLabel(item, device)}</p>
+        <p className="product-name">{label}</p>
         <textarea rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
         <ErrorBanner error={error} />
         <div className="row gap end">
@@ -186,14 +185,14 @@ export function DeviceNoteDialog({ device, item, onClose, onSaved }: Props) {
   );
 }
 
-export function CorrectSnDialog({ device, item, onClose, onSaved }: Props) {
+export function CorrectSnDialog({ device, label, onClose, onSaved }: Props) {
   const [sn, setSn] = useState(device.sn ?? '');
   const [reason, setReason] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
     <Dialog title={device.sn ? '更正 SN' : '補登 SN'} onClose={onClose}>
       <div className="stack">
-        <p className="product-name">{unitLabel(item, device)}</p>
+        <p className="product-name">{label}</p>
         <SnInput label="正確的 SN" value={sn} onChange={setSn} />
         <label>更正原因（必填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
         <ErrorBanner error={error} />

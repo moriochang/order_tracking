@@ -1,5 +1,6 @@
 // 異動紀錄時間軸：同一筆交易的事件合併顯示，新到舊排序，可依類別或單機篩選。
 import { useMemo, useState } from 'react';
+import { unitNumbers } from '../lib/units';
 import type { AuditLog, Device, DeviceStatus, OrderItem } from '../lib/types';
 import { ACTION_LABEL, AUDIT_FILTERS, FIELD_LABEL, STATUS_LABEL } from '../lib/labels';
 import { fmtDateTime } from '../lib/format';
@@ -29,14 +30,14 @@ export function AuditTimeline({ logs, items, devices, deviceFilter, onClearDevic
   const [filter, setFilter] = useState('all');
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const deviceById = useMemo(() => new Map(devices.map((d) => [d.id, d])), [devices]);
+  const unitNo = useMemo(() => unitNumbers(items, devices), [items, devices]);
 
   const describe = (l: AuditLog): string => {
     if (l.entity_type === 'order') return '訂單';
-    if (l.entity_type === 'order_item') return `商品 ${itemById.get(l.entity_id)?.line_no ?? ''}`;
+    if (l.entity_type === 'order_item') return `商品 ${itemById.get(l.entity_id)?.full_product_name ?? ''}`;
     if (l.entity_type === 'device' || l.entity_type === 'notification') {
       const d = l.device_id ? deviceById.get(l.device_id) : undefined;
-      const it = d ? itemById.get(d.order_item_id) : undefined;
-      const unit = d ? `單機 ${it?.line_no ?? '?'}-${d.unit_no}` : '單機';
+      const unit = d ? `單機 ${unitNo.get(d.id) ?? '?'}` : '單機';
       return l.entity_type === 'notification' ? `${unit} 通知紀錄` : unit;
     }
     return l.entity_type;
