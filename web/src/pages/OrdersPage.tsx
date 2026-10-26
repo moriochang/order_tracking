@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
 import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders, type SearchField } from '../lib/api';
 import { fmtDate, todayTaipei } from '../lib/format';
+import { exportCsv, exportXlsx } from '../lib/exportOrders';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
 import { ArrivalDialog, DeliveryDialog, NotifyDialog } from '../components/DeviceDialogs';
@@ -48,6 +49,29 @@ function sinceOf(period: string): string | undefined {
   if (period === '30d') return back(29);
   if (period === 'month') return `${today.slice(0, 8)}01`;
   return undefined;
+}
+
+function ExportBar({ orders }: { orders: OrderSummary[] }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  async function run(fn: (o: OrderSummary[]) => Promise<void>) {
+    setBusy(true); setError(null);
+    try { await fn(orders); } catch (e) { setError(e); } finally { setBusy(false); }
+  }
+  return (
+    <div className="stack tight">
+      <div className="row between wrap">
+        <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示最近 100 筆，請縮小條件）' : ''}</span>
+        <div className="row gap">
+          <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportXlsx)}>
+            {busy ? '匯出中…' : '匯出 Excel'}
+          </button>
+          <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportCsv)}>匯出 CSV</button>
+        </div>
+      </div>
+      <ErrorBanner error={error} />
+    </div>
+  );
 }
 
 export function OrdersPage() {
@@ -120,7 +144,7 @@ export function OrdersPage() {
         </>
       ) : (
         <>
-          {result.data && <p className="muted small">共 {result.data.length} 筆{result.data.length >= 100 ? '（只顯示最近 100 筆，請縮小條件）' : ''}</p>}
+          {result.data && <ExportBar orders={result.data} />}
           <ErrorBanner error={result.error} />
           {result.loading && <div className="muted">載入中…</div>}
           {result.data && (result.data.length ? <OrderTable orders={result.data} /> : <div className="muted">沒有符合的訂單。</div>)}
