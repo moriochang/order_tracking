@@ -138,7 +138,12 @@ export async function listStores() {
 }
 
 export async function listAdminAudit(limit = 100) {
-  return unwrap(await supabase.from('audit_logs').select('*').is('order_id', null)
+  return unwrap(await supabase.from('audit_logs').select('*').is('order_id', null).neq('action', 'export_orders')
+    .order('id', { ascending: false }).limit(limit)) as AuditLog[];
+}
+
+export async function listExportLogs(limit = 100) {
+  return unwrap(await supabase.from('audit_logs').select('*').eq('action', 'export_orders')
     .order('id', { ascending: false }).limit(limit)) as AuditLog[];
 }
 

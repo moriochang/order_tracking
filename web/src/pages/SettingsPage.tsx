@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth, useMe } from '../auth/AuthProvider';
 import { ALLOWED_EMAIL_DOMAIN } from '../lib/clients';
-import { adminCreateUser, catalogCount, listAdminAudit, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
+import { adminCreateUser, catalogCount, listAdminAudit, listExportLogs, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
 import { fmtDateTime } from '../lib/format';
 import { ACTION_LABEL, FIELD_LABEL, ROLE_LABEL } from '../lib/labels';
 import type { Profile, Role, Store } from '../lib/types';
@@ -24,6 +24,7 @@ export function SettingsPage() {
       <StoresSection stores={stores.data ?? []} error={stores.error} onSaved={reloadAll} />
       <UsersSection users={users.data ?? []} stores={stores.data ?? []} error={users.error} onSaved={reloadAll} />
       <CatalogSection onSaved={reloadAll} />
+      <ExportLogSection />
       <section className="card stack">
         <h2>帳號與門市異動紀錄（最近 50 筆）</h2>
         <ErrorBanner error={audit.error} />
@@ -338,6 +339,30 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+// 匯出紀錄（只有管理者看得到；紀錄不可修改）
+function ExportLogSection() {
+  const logs = useAsync(() => listExportLogs(100), []);
+  return (
+    <section className="card stack">
+      <h2>匯出紀錄（最近 100 筆）</h2>
+      <ErrorBanner error={logs.error} />
+      {logs.data?.length === 0 && <p className="muted">尚無匯出紀錄。</p>}
+      <ul className="plain small">
+        {(logs.data ?? []).map((l) => {
+          const a = (l.after_data ?? {}) as { format?: string; orders?: number; rows?: number; filters?: Record<string, string> };
+          return (
+            <li key={l.id}>
+              {fmtDateTime(l.occurred_at)}｜<span className="operator">{l.actor_display_name ?? l.actor_db_role}</span>｜
+              {a.format === 'csv' ? 'CSV' : 'Excel'}｜{a.orders} 張訂單／{a.rows} 列｜
+              {Object.entries(a.filters ?? {}).map(([k, v]) => `${k}：${v}`).join('・')}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

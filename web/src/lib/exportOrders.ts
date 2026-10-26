@@ -42,10 +42,14 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// 先寫入匯出紀錄（失敗就不產生檔案），再下載
+type Logger = (format: 'xlsx' | 'csv', rows: number) => Promise<unknown>;
+
 const fileName = (ext: string) => `預購訂單_${todayTaipei().replaceAll('-', '')}.${ext}`;
 
-export async function exportXlsx(orders: OrderSummary[]) {
+export async function exportXlsx(orders: OrderSummary[], log: Logger) {
   const rows = await buildRows(orders);
+  await log('xlsx', rows.length - 1);
   const { default: writeExcelFile } = await import('write-excel-file/universal');
   const sheetData = rows.map((r, i) => r.map((v) => ({ value: v, type: String, ...(i === 0 ? { fontWeight: 'bold' as const } : {}) })));
   const blob = await writeExcelFile(sheetData, { columns: WIDTHS.map((width) => ({ width })), sheet: '訂單' }).toBlob();
@@ -53,8 +57,9 @@ export async function exportXlsx(orders: OrderSummary[]) {
 }
 
 // CSV：UTF-8 加 BOM，Excel 才能正確顯示中文
-export async function exportCsv(orders: OrderSummary[]) {
+export async function exportCsv(orders: OrderSummary[], log: Logger) {
   const rows = await buildRows(orders);
+  await log('csv', rows.length - 1);
   const esc = (v: string) => (/[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   const text = '﻿' + rows.map((r) => r.map(esc).join(',')).join('\r\n');
   download(new Blob([text], { type: 'text/csv;charset=utf-8' }), fileName('csv'));

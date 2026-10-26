@@ -51,23 +51,28 @@ function sinceOf(period: string): string | undefined {
   return undefined;
 }
 
-function ExportBar({ orders }: { orders: OrderSummary[] }) {
+// 匯出：只有主管、管理者可用；每次匯出先寫入紀錄（含查詢條件）
+function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Record<string, string> }) {
+  const me = useMe();
+  const canExport = me.role === 'manager' || me.role === 'admin';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  async function run(fn: (o: OrderSummary[]) => Promise<void>) {
+  const log = (format: 'xlsx' | 'csv', rows: number) =>
+    rpc('log_export', { p_format: format, p_orders: orders.length, p_rows: rows, p_filters: filters });
+  async function run(fn: typeof exportXlsx) {
     setBusy(true); setError(null);
-    try { await fn(orders); } catch (e) { setError(e); } finally { setBusy(false); }
+    try { await fn(orders, log); } catch (e) { setError(e); } finally { setBusy(false); }
   }
   return (
     <div className="stack tight">
       <div className="row between wrap">
         <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示最近 100 筆，請縮小條件）' : ''}</span>
-        <div className="row gap">
+        {canExport && <div className="row gap">
           <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportXlsx)}>
             {busy ? '匯出中…' : '匯出 Excel'}
           </button>
           <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportCsv)}>匯出 CSV</button>
-        </div>
+        </div>}
       </div>
       <ErrorBanner error={error} />
     </div>
@@ -144,7 +149,12 @@ export function OrdersPage() {
         </>
       ) : (
         <>
-          {result.data && <ExportBar orders={result.data} />}
+          {result.data && <ExportBar orders={result.data} filters={{
+            時間: PERIODS.find((x) => x.key === period)?.label ?? '',
+            門市: store || '全部門市',
+            狀態: STATUS_FILTERS.find((x) => x.key === status)?.label ?? '',
+            ...(q ? { 搜尋: `${FIELDS.find((x) => x.key === field)?.label}：${q}` } : {}),
+          }} />}
           <ErrorBanner error={result.error} />
           {result.loading && <div className="muted">載入中…</div>}
           {result.data && (result.data.length ? <OrderTable orders={result.data} /> : <div className="muted">沒有符合的訂單。</div>)}
