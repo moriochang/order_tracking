@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
-import { itemsForOrders, searchBacklog, searchOrders } from '../lib/api';
+import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders } from '../lib/api';
 import { fmtDate } from '../lib/format';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
-import type { BacklogRow, OrderSummary } from '../lib/types';
+import type { BacklogRow, Device, OrderSummary } from '../lib/types';
+import { ArrivalDialog, DeliveryDialog, NotifyDialog } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 export function OrdersPage() {
@@ -105,29 +106,62 @@ function BacklogTable({ rows: raw, all }: { rows: BacklogRow[]; all: boolean }) 
 const ITEM_STATUSES = ['pending_arrival', 'arrived_pending_notify', 'notified_pending_pickup', 'delivered', 'excluded'] as const;
 
 // 同一張訂單裡相同商品（一次訂多台或分開加入）合併為一列，數量與各狀態台數相加（保持原本順序）
-function groupByProduct(rows: BacklogRow[]): BacklogRow[] {
-  const out: BacklogRow[] = [];
+type GroupRow = BacklogRow & { item_ids: string[] };
+function groupByProduct(rows: BacklogRow[]): GroupRow[] {
+  const out: GroupRow[] = [];
   for (const r of rows) {
     const g = out.find((x) => x.order_id === r.order_id
       && x.full_product_name === r.full_product_name && x.model === r.model && x.barcode === r.barcode);
-    if (!g) { out.push({ ...r }); continue; }
+    if (!g) { out.push({ ...r, item_ids: [r.item_id] }); continue; }
+    g.item_ids.push(r.item_id);
     g.ordered_qty += r.ordered_qty;
     for (const s of ITEM_STATUSES) g[s] += r[s];
   }
   return out;
 }
 
-export function OrderTable({ orders }: { orders: OrderSummary[] }) {
+// 下一步操作：每一步不同顏色；有多台時先處理編號最小的一台
+const STEPS = [
+  { key: 'arrival', label: '登記到貨', status: 'pending_arrival' },
+  { key: 'label', label: '已貼', status: 'arrived_or_notified_unlabeled' },
+  { key: 'notify', label: '通知顧客', status: 'arrived_pending_notify' },
+  { key: 'deliver', label: '完成交付', status: 'notified_pending_pickup' },
+] as const;
+type StepKey = (typeof STEPS)[number]['key'];
+
+export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onChanged?: () => void }) {
   const ids = orders.map((o) => o.id);
   const items = useAsync(() => itemsForOrders(ids), [ids.join(',')]);
+  const devices = useAsync(() => devicesForOrders(ids), [ids.join(',')]);
+  const [action, setAction] = useState<{ step: StepKey; device: Device; label: string } | null>(null);
+  const [opError, setOpError] = useState<unknown>(null);
   const itemsOf = (orderId: string) => groupByProduct((items.data ?? []).filter((i) => i.order_id === orderId));
+  const reload = () => { items.reload(); devices.reload(); onChanged?.(); };
+
+  const stepDevices = (g: GroupRow, step: (typeof STEPS)[number]) => (devices.data ?? []).filter((d) => g.item_ids.includes(d.order_item_id)
+    && (step.status === 'arrived_or_notified_unlabeled'
+      ? ['arrived_pending_notify', 'notified_pending_pickup'].includes(d.status) && !d.is_labeled
+      : d.status === step.status));
+
+  async function start(step: StepKey, device: Device, label: string) {
+    setOpError(null);
+    if (step !== 'label') { setAction({ step, device, label }); return; }
+    try {
+      await rpc('set_labeled', { p_device_id: device.id, p_expected_version: device.version, p_labeled: true });
+      reload();
+    } catch (e) {
+      setOpError(e);
+    }
+  }
+
   return (
     <div className="table-wrap">
+      <ErrorBanner error={opError} />
       <table className="list">
         <thead>
           <tr>
             <th>訂單編號</th><th>顧客</th><th>電話</th><th>結帳日期</th><th>機號</th><th>序號</th><th>預結號碼</th>
-            <th>商品明細</th><th>數量</th><th>狀態</th><th>備註</th>
+            <th>商品明細</th><th>數量</th><th>狀態</th><th>操作</th><th>備註</th>
           </tr>
         </thead>
         <tbody>
@@ -167,11 +201,41 @@ export function OrderTable({ orders }: { orders: OrderSummary[] }) {
                   </div>
                 )}
               </td>
+              <td data-label="操作">
+                {o.order_status === 'cancelled' ? '—' : (
+                  <div className="item-lines">
+                    {itemsOf(o.id).map((g) => (
+                      <div key={g.item_id} className="row gap">
+                        {STEPS.map((step) => {
+                          const devs = stepDevices(g, step);
+                          if (!devs.length) return null;
+                          const label = `${o.order_no}・${g.full_product_name}${devs[0].sn ? `（${devs[0].sn}）` : ''}`;
+                          return (
+                            <button key={step.key} type="button" className={`step step-${step.key}`}
+                              onClick={() => start(step.key, devs[0], label)}>
+                              {step.label}{devs.length > 1 ? ` ×${devs.length}` : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </td>
               <td data-label="備註" className="clip">{o.order_note ?? ''}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      {action?.step === 'arrival' && <ArrivalDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
+      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
+      {action?.step === 'notify' && (
+        <NotifyDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload}
+          others={(devices.data ?? [])
+            .filter((d) => d.order_id === action.device.order_id && d.id !== action.device.id
+              && ['arrived_pending_notify', 'notified_pending_pickup'].includes(d.status))
+            .map((d) => ({ device: d, label: `${(items.data ?? []).find((i) => i.item_id === d.order_item_id)?.full_product_name ?? ''}${d.sn ? `（${d.sn}）` : ''}` }))} />
+      )}
     </div>
   );
 }

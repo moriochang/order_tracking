@@ -63,6 +63,12 @@ export async function itemsForOrders(orderIds: string[]) {
     .order('created_at')) as BacklogRow[];
 }
 
+export async function devicesForOrders(orderIds: string[]) {
+  if (!orderIds.length) return [] as Device[];
+  return unwrap(await supabase.from('devices').select('*').in('order_id', orderIds).neq('status', 'cancelled')
+    .order('unit_no')) as Device[];
+}
+
 export async function loadOrder(orderId: string) {
   const [summary, items, devices, notifications, audit, scans] = await Promise.all([
     supabase.from('v_order_summary').select('*').eq('id', orderId).maybeSingle(),

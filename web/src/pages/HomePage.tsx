@@ -48,7 +48,7 @@ export function HomePage() {
           <Link to="/orders/new" className="button">＋ 新增訂單</Link>
         </div>
         <ErrorBanner error={recent.error} />
-        {recent.data && <OrderTable orders={recent.data} />}
+        {recent.data && <OrderTable orders={recent.data} onChanged={counts.reload} />}
       </section>
     </div>
   );

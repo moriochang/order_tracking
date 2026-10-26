@@ -190,3 +190,9 @@ dl.compact dd { margin: 0; }
 .item-lines > div { min-height: 1.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
 @media (max-width: 799px) { .item-lines > div { max-width: none; white-space: normal; } }
 .operator { background: var(--operator-bg); color: #fff; padding: 0 6px; border-radius: 4px; white-space: nowrap; }
+/* 下一步操作按鈕：每一步不同顏色 */
+button.step { min-height: 30px; padding: 3px 10px; font-size: 0.85rem; color: #fff; }
+button.step-arrival { background: #475467; border-color: #475467; }
+button.step-label { background: #7a5af8; border-color: #7a5af8; }
+button.step-notify { background: #dc6803; border-color: #dc6803; }
+button.step-deliver { background: #1b7f3b; border-color: #1b7f3b; }
