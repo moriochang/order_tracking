@@ -9,14 +9,14 @@ import { AuditTimeline } from '../components/AuditTimeline';
 import { EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
 import { unitNumbers } from '../lib/units';
 import { OrderProgress } from './OrdersPage';
-import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, DeviceNoteDialog, NotifyDialog } from '../components/DeviceDialogs';
+import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, NotifyDialog } from '../components/DeviceDialogs';
 
 type Modal =
   | { kind: 'edit_order' }
   | { kind: 'cancel_order' }
   | { kind: 'edit_item'; item: OrderItem }
   | { kind: 'cancel_device'; device: Device; item: OrderItem }
-  | { kind: 'arrival' | 'notify' | 'deliver' | 'note' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
+  | { kind: 'arrival' | 'notify' | 'deliver' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
 
 // 更正狀態：只能退回一格（原因必填）
 const CORRECT_TO: Partial<Record<Device['status'], Device['status']>> = {
@@ -161,7 +161,6 @@ export function OrderDetailPage() {
                       <td data-label="單機">{unitNo.get(dev.id)}</td>
                       <td data-label="商品">
                         <span className="product-name">{it.full_product_name}</span>
-                        {dev.note && <div className="small">備註：{dev.note}</div>}
                         {dev.delivery_note && <div className="small muted">交付：{dev.delivery_note}</div>}
                       </td>
                       <td data-label="SN">
@@ -203,9 +202,6 @@ export function OrderDetailPage() {
                       <td data-label="">
                         <div className="row gap">
                           <button className="link" onClick={() => { setDeviceFilter(dev.id); document.getElementById('audit')?.scrollIntoView({ behavior: 'smooth' }); }}>歷史</button>
-                          {active && dev.status !== 'cancelled' && (
-                            <button className="link" onClick={() => setModal({ kind: 'note', device: dev, item: it })}>備註</button>
-                          )}
                           {active && CORRECT_TO[dev.status] && (
                             <button className="link" onClick={() => setModal({ kind: 'correct_status', device: dev, item: it })}>更正狀態</button>
                           )}
@@ -252,7 +248,6 @@ export function OrderDetailPage() {
       {modal?.kind === 'edit_order' && <EditOrderDialog order={o} onClose={close} onSaved={reload} />}
       {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} label={unitName(modal.device)} itemNote={modal.item.item_note} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'note' && <DeviceNoteDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'notify' && (
         <NotifyDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload}

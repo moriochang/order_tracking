@@ -1,4 +1,4 @@
-// 單機作業對話框：登記到貨（SN）、通知顧客、完成交付、單機備註、更正 SN
+// 單機作業對話框：登記到貨（SN）、通知顧客、完成交付、更正 SN
 import { useState } from 'react';
 import { ocrReceipt, rpc } from '../lib/api';
 import { compressImage } from '../lib/image';
@@ -162,27 +162,6 @@ export function DeliveryDialog({ device, label, itemNote, onClose, onSaved }: Pr
           <button disabled={busy}
             onClick={() => run(() => rpc('complete_delivery', { p_device_id: device.id, p_expected_version: device.version, p_note: note.trim() || null }))}>
             {busy ? '處理中…' : '確認交付'}
-          </button>
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-
-export function DeviceNoteDialog({ device, label, onClose, onSaved }: Props) {
-  const [note, setNote] = useState(device.note ?? '');
-  const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
-  return (
-    <Dialog title="單機備註" onClose={onClose}>
-      <div className="stack">
-        <p className="product-name">{label}</p>
-        <textarea rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
-        <ErrorBanner error={error} />
-        <div className="row gap end">
-          <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy || note.trim() === (device.note ?? '')}
-            onClick={() => run(() => rpc('update_device_note', { p_device_id: device.id, p_expected_version: device.version, p_note: note.trim() || null }))}>
-            {busy ? '儲存中…' : '儲存'}
           </button>
         </div>
       </div>
