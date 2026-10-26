@@ -43,7 +43,7 @@ a { color: var(--primary); }
 .topbar nav a.active { background: var(--info-bg); color: var(--primary); font-weight: 600; }
 .nav-disabled { color: var(--muted); cursor: not-allowed; }
 .who { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+main { padding: 16px; max-width: 1680px; margin: 0 auto; }
 @media (min-width: 800px) {
   .topbar nav { order: 0; width: auto; }
 }
@@ -187,7 +187,7 @@ dl.compact { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; marg
 dl.compact dd { margin: 0; }
 .button.disabled { opacity: 0.45; pointer-events: none; }
 .scan-thumb { max-width: 100%; max-height: 240px; border: 1px solid var(--border); border-radius: 6px; display: block; }
-.item-lines > div { min-height: 1.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+.item-lines > div { min-height: 1.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 @media (max-width: 799px) { .item-lines > div { max-width: none; white-space: normal; } }
 .operator { background: var(--operator-bg); color: #fff; padding: 0 6px; border-radius: 4px; white-space: nowrap; }
 /* 下一步操作按鈕：每一步不同顏色 */
@@ -204,3 +204,4 @@ td[data-label='已貼'] input[type='checkbox'] { accent-color: #7a5af8; }
 .item-lines > div { display: flex; align-items: center; gap: 6px; }
 .item-lines > div + div { margin-top: 4px; }
 .item-lines button.step { min-height: 0; padding: 2px 8px; font-size: 0.8rem; line-height: 1.4; border-radius: 999px; }
+@media (min-width: 800px) { table.list td.nowrap { white-space: nowrap; } }

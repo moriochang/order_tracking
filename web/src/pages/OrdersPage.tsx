@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
 import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders } from '../lib/api';
@@ -120,14 +120,19 @@ function groupByProduct(rows: BacklogRow[]): GroupRow[] {
   return out;
 }
 
-// 下一步操作：每一步不同顏色；有多台時先處理編號最小的一台
-const STEPS = [
-  { key: 'arrival', label: '登記到貨', status: 'pending_arrival' },
-  { key: 'label', label: '已貼', status: 'arrived_or_notified_unlabeled' },
-  { key: 'notify', label: '通知顧客', status: 'arrived_pending_notify' },
-  { key: 'deliver', label: '完成交付', status: 'notified_pending_pickup' },
-] as const;
-type StepKey = (typeof STEPS)[number]['key'];
+// 下一步操作：每一步不同顏色
+type StepKey = 'arrival' | 'label' | 'notify' | 'deliver';
+const STEP_LABEL: Record<StepKey, string> = { arrival: '登記到貨', label: '已貼', notify: '通知顧客', deliver: '完成交付' };
+function stepsOf(d: Device): StepKey[] {
+  const unlabeled = !d.is_labeled ? ['label' as const] : [];
+  if (d.status === 'pending_arrival') return ['arrival'];
+  if (d.status === 'arrived_pending_notify') return [...unlabeled, 'notify'];
+  if (d.status === 'notified_pending_pickup') return [...unlabeled, 'deliver'];
+  return [];
+}
+
+// 每台單機各佔一行（同商品相鄰排列），登記到貨等操作才知道是哪一台；數量只顯示在同商品的第一行
+type UnitLine = { device: Device; name: string; groupQty: number | null };
 
 export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onChanged?: () => void }) {
   const ids = orders.map((o) => o.id);
@@ -135,13 +140,20 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
   const devices = useAsync(() => devicesForOrders(ids), [ids.join(',')]);
   const [action, setAction] = useState<{ step: StepKey; device: Device; label: string } | null>(null);
   const [opError, setOpError] = useState<unknown>(null);
-  const itemsOf = (orderId: string) => groupByProduct((items.data ?? []).filter((i) => i.order_id === orderId));
   const reload = () => { items.reload(); devices.reload(); onChanged?.(); };
 
-  const stepDevices = (g: GroupRow, step: (typeof STEPS)[number]) => (devices.data ?? []).filter((d) => g.item_ids.includes(d.order_item_id)
-    && (step.status === 'arrived_or_notified_unlabeled'
-      ? ['arrived_pending_notify', 'notified_pending_pickup'].includes(d.status) && !d.is_labeled
-      : d.status === step.status));
+  function linesOf(orderId: string): UnitLine[] {
+    const its = (items.data ?? []).filter((i) => i.order_id === orderId);
+    const groups = groupByProduct(its);
+    const lines: UnitLine[] = [];
+    for (const g of groups) {
+      const devs = (devices.data ?? [])
+        .filter((d) => g.item_ids.includes(d.order_item_id))
+        .sort((x, y) => g.item_ids.indexOf(x.order_item_id) - g.item_ids.indexOf(y.order_item_id) || x.unit_no - y.unit_no);
+      devs.forEach((d, i) => lines.push({ device: d, name: g.full_product_name, groupQty: i === 0 ? devs.length : null }));
+    }
+    return lines;
+  }
 
   async function start(step: StepKey, device: Device, label: string) {
     setOpError(null);
@@ -165,66 +177,41 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => (
-            <tr key={o.id} className={o.order_status === 'cancelled' ? 'dim' : ''}>
-              <td data-label="訂單編號"><Link to={`/orders/${o.id}`}>{o.order_no}</Link></td>
-              <td data-label="顧客">{o.customer_name}</td>
-              <td data-label="電話">{o.customer_phone}</td>
-              <td data-label="結帳日期">{fmtDate(o.purchase_date)}</td>
-              <td data-label="機號">{o.register_no}</td>
-              <td data-label="序號">{o.receipt_seq}</td>
-              <td data-label="預結號碼">{o.receipt_no ?? '—'}</td>
-              <td data-label="商品明細">
-                {o.order_status === 'cancelled' ? '—' : (
-                  <div className="item-lines">
-                    {itemsOf(o.id).map((i) => <div key={i.item_id} className="product-name">{i.full_product_name}</div>)}
-                  </div>
-                )}
-              </td>
-              <td data-label="數量">
-                {o.order_status === 'cancelled' ? '—' : (
-                  <div className="item-lines">
-                    {itemsOf(o.id).map((i) => <div key={i.item_id}>{i.ordered_qty}</div>)}
-                  </div>
-                )}
-              </td>
-              <td data-label="狀態">
-                {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : (
-                  <div className="item-lines">
-                    {itemsOf(o.id).map((i) => (
-                      <div key={i.item_id} className="row gap">
-                        {ITEM_STATUSES.filter((s) => i[s] > 0).map((s) => (
-                          <span key={s}><StatusBadge status={s} />{i[s] > 1 ? ` ×${i[s]}` : ''}</span>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </td>
-              <td data-label="操作">
-                {o.order_status === 'cancelled' ? '—' : (
-                  <div className="item-lines">
-                    {itemsOf(o.id).map((g) => (
-                      <div key={g.item_id} className="row gap">
-                        {STEPS.map((step) => {
-                          const devs = stepDevices(g, step);
-                          if (!devs.length) return null;
-                          const label = `${o.order_no}・${g.full_product_name}${devs[0].sn ? `（${devs[0].sn}）` : ''}`;
-                          return (
-                            <button key={step.key} type="button" className={`step step-${step.key}`}
-                              onClick={() => start(step.key, devs[0], label)}>
-                              {step.label}{devs.length > 1 ? ` ×${devs.length}` : ''}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </td>
-              <td data-label="備註" className="clip">{o.order_note ?? ''}</td>
-            </tr>
-          ))}
+          {orders.map((o) => {
+            const lines = o.order_status === 'cancelled' ? [] : linesOf(o.id);
+            const cell = (render: (l: UnitLine, i: number) => ReactNode) => (o.order_status === 'cancelled' ? '—' : (
+              <div className="item-lines">{lines.map((l, i) => <div key={l.device.id}>{render(l, i)}</div>)}</div>
+            ));
+            return (
+              <tr key={o.id} className={o.order_status === 'cancelled' ? 'dim' : ''}>
+                <td data-label="訂單編號" className="nowrap"><Link to={`/orders/${o.id}`}>{o.order_no}</Link></td>
+                <td data-label="顧客" className="nowrap">{o.customer_name}</td>
+                <td data-label="電話" className="nowrap">{o.customer_phone}</td>
+                <td data-label="結帳日期" className="nowrap">{fmtDate(o.purchase_date)}</td>
+                <td data-label="機號">{o.register_no}</td>
+                <td data-label="序號">{o.receipt_seq}</td>
+                <td data-label="預結號碼">{o.receipt_no ?? '—'}</td>
+                <td data-label="商品明細">
+                  {cell((l, i) => (
+                    <span className="product-name">{i + 1}. {l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</span>
+                  ))}
+                </td>
+                <td data-label="數量">{cell((l) => l.groupQty ?? '')}</td>
+                <td data-label="狀態">
+                  {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : cell((l) => <StatusBadge status={l.device.status} />)}
+                </td>
+                <td data-label="操作">
+                  {cell((l, i) => stepsOf(l.device).map((step) => (
+                    <button key={step} type="button" className={`step step-${step}`}
+                      onClick={() => start(step, l.device, `${o.order_no}・${i + 1}. ${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
+                      {STEP_LABEL[step]}
+                    </button>
+                  )))}
+                </td>
+                <td data-label="備註" className="clip">{o.order_note ?? ''}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {action?.step === 'arrival' && <ArrivalDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
