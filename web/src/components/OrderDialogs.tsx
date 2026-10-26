@@ -5,7 +5,7 @@ import { todayTaipei } from '../lib/format';
 import { FIELD_LABEL, STATUS_LABEL } from '../lib/labels';
 import type { Device, OrderItem, OrderSummary } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
-import { CatalogNameHint, ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem, useModelNameSuggest } from './ItemEditor';
+import { CatalogNameHint, ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem, sameProduct, useModelNameSuggest } from './ItemEditor';
 
 export function useSubmit(onDone: () => void) {
   const [busy, setBusy] = useState(false);
@@ -95,22 +95,34 @@ export function EditOrderDialog({ order, onClose, onSaved }: { order: OrderSumma
   );
 }
 
-export function AddItemDialog({ orderId, onClose, onSaved }: { orderId: string; onClose: () => void; onSaved: () => void }) {
+export function AddItemDialog({ orderId, items, onClose, onSaved }: {
+  orderId: string; items: OrderItem[]; onClose: () => void; onSaved: () => void;
+}) {
   const [item, setItem] = useState(emptyDraftItem);
   const [requestId] = useState(() => crypto.randomUUID());
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   const problems = draftItemProblems(item);
+  const payload = draftItemPayload(item);
+  // 訂單裡已有相同商品：改為增加該項數量
+  const twin = items.find((i) => !i.cancelled_at && sameProduct(i, payload));
+  const add = item.devices.length;
+  const submit = () => (twin
+    ? rpc('change_item_quantity', {
+      p_item_id: twin.id, p_expected_version: twin.version, p_new_qty: twin.ordered_qty + add,
+      p_cancel_device_ids: [], p_reason: '新增相同商品，合併數量',
+    })
+    : rpc('add_order_item', { p_order_id: orderId, p_item: { ...payload, client_request_id: requestId } }));
   return (
     <Dialog title="新增商品" onClose={onClose}>
       <div className="stack">
         <ItemEditor value={item} onChange={setItem} />
         {problems.map((p) => <div key={p} className="small danger-text">・{p}</div>)}
+        {twin && <div className="alert info small">此訂單第 {twin.line_no} 項是相同商品，將合併為同一項：{twin.ordered_qty} 台 → {twin.ordered_qty + add} 台。</div>}
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy || problems.length > 0}
-            onClick={() => run(() => rpc('add_order_item', { p_order_id: orderId, p_item: { ...draftItemPayload(item), client_request_id: requestId } }))}>
-            {busy ? '新增中…' : `新增 ${item.devices.length} 台`}
+          <button disabled={busy || problems.length > 0} onClick={() => run(submit)}>
+            {busy ? '處理中…' : twin ? `合併到第 ${twin.line_no} 項（+${add} 台）` : `新增 ${add} 台`}
           </button>
         </div>
       </div>

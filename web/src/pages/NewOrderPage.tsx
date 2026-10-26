@@ -5,7 +5,7 @@ import { ApiError, rpc } from '../lib/api';
 import { fmtDate, todayTaipei } from '../lib/format';
 import type { DraftItem } from '../lib/types';
 import { Dialog, ErrorBanner } from '../components/ui';
-import { ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem } from '../components/ItemEditor';
+import { ItemEditor, draftItemPayload, draftItemProblems, emptyDraftItem, sameProduct } from '../components/ItemEditor';
 import { ReceiptScanDialog, ScanChecks, type ScanResult } from '../components/ReceiptScan';
 
 type Header = {
@@ -53,6 +53,7 @@ export function NewOrderPage() {
   const [error, setError] = useState<unknown>(null);
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [mergeNotice, setMergeNotice] = useState('');
 
   const set = (patch: Partial<Header>) => setH((prev) => ({ ...prev, ...patch }));
   const unchecked = items.filter((i) => i.scan_notes?.length).length;
@@ -68,9 +69,17 @@ export function NewOrderPage() {
   function saveEditing() {
     if (!editing || draftItemProblems(editing).length) return;
     const saved = { ...editing, scan_notes: undefined };   // 同仁已核對
-    setItems((prev) => (prev.some((i) => i.key === saved.key)
-      ? prev.map((i) => (i.key === saved.key ? saved : i))
-      : [...prev, saved]));
+    setMergeNotice('');
+    const isNew = !items.some((i) => i.key === saved.key);
+    const twinIdx = isNew ? items.findIndex((i) => sameProduct(i, saved)) : -1;
+    if (twinIdx >= 0) {
+      // 與已加入的商品相同：合併數量，不另開一項
+      const twin = items[twinIdx];
+      setItems((prev) => prev.map((i) => (i.key === twin.key ? { ...i, devices: [...i.devices, ...saved.devices] } : i)));
+      setMergeNotice(`與第 ${twinIdx + 1} 項相同，已合併為 ${twin.devices.length + saved.devices.length} 台。`);
+    } else {
+      setItems((prev) => (isNew ? [...prev, saved] : prev.map((i) => (i.key === saved.key ? saved : i))));
+    }
     setEditing(null);
   }
 
@@ -207,6 +216,7 @@ export function NewOrderPage() {
             </div>
 
             {items.length === 0 && !editing && <p className="muted">尚未加入商品。</p>}
+            {mergeNotice && <div className="alert info small">{mergeNotice}</div>}
             {items.map((it, idx) => (
               <div key={it.key} className={`draft-item ${editing?.key === it.key ? 'hidden' : ''}`}>
                 <div className="grow">

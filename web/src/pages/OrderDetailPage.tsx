@@ -261,7 +261,7 @@ export function OrderDetailPage() {
             {modal.device.status === 'arrived_pending_notify' && '（會清除 SN 與已貼）'}</p>}
           onConfirm={async (reason) => { await rpc('correct_device_status', { p_device_id: modal.device.id, p_expected_version: modal.device.version, p_reason: reason }); reload(); }} />
       )}
-      {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} items={d.items} onClose={close} onSaved={reload} />}
       {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} onClose={close} onSaved={reload} />}
       {modal?.kind === 'qty' && <ChangeQtyDialog item={modal.item} devices={d.devices} onClose={close} onSaved={reload} />}
       {modal?.kind === 'cancel_order' && (

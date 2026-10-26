@@ -14,6 +14,12 @@ export function emptyDraftItem(): DraftItem {
   };
 }
 
+// 相同商品（品名、型號、國際條碼、商品備註都相同）應合併成同一項、增加數量
+type ProductKey = { full_product_name: string; model: string | null; barcode: string | null; item_note: string | null };
+const keyOf = (p: ProductKey) => [p.full_product_name, p.model, (p.barcode ?? '').replace(/\s/g, ''), p.item_note]
+  .map((x) => (x ?? '').trim().toUpperCase()).join('|');
+export const sameProduct = (a: ProductKey, b: ProductKey) => keyOf(a) === keyOf(b);
+
 export function draftItemProblems(item: DraftItem): string[] {
   const problems: string[] = [];
   if (!item.full_product_name.trim()) problems.push('請填寫完整商品名稱');
