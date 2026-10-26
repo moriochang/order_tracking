@@ -86,7 +86,7 @@ function BacklogTable({ rows: raw, all }: { rows: BacklogRow[]; all: boolean }) 
               <tr key={r.item_id} className={r.pending_arrival ? '' : 'dim'}>
                 <td data-label="結帳日期">{fmtDate(r.purchase_date)}</td>
                 <td data-label="訂單編號"><Link to={`/orders/${r.order_id}`}>{r.order_no}</Link></td>
-                <td data-label="顧客"><span className="customer-name">{r.customer_name}</span></td>
+                <td data-label="顧客">{r.customer_name}</td>
                 <td data-label="品名" className="product-name">{r.full_product_name}</td>
                 <td data-label="訂購">{r.ordered_qty}</td>
                 <td data-label="欠貨"><strong>{r.pending_arrival}</strong></td>
@@ -134,7 +134,7 @@ export function OrderTable({ orders }: { orders: OrderSummary[] }) {
           {orders.map((o) => (
             <tr key={o.id} className={o.order_status === 'cancelled' ? 'dim' : ''}>
               <td data-label="訂單編號"><Link to={`/orders/${o.id}`}>{o.order_no}</Link></td>
-              <td data-label="顧客"><span className="customer-name">{o.customer_name}</span></td>
+              <td data-label="顧客">{o.customer_name}</td>
               <td data-label="電話">{o.customer_phone}</td>
               <td data-label="結帳日期">{fmtDate(o.purchase_date)}</td>
               <td data-label="機號">{o.register_no}</td>
