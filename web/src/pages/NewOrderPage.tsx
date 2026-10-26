@@ -273,6 +273,7 @@ export function NewOrderPage() {
                     <div className="small muted">
                       {[it.barcode && `條碼 ${it.barcode}`, it.model].filter(Boolean).join('・')} × {it.devices.length} 台
                     </div>
+                    {it.item_note.trim() && <div className="device-note block">⚠ {it.item_note.trim()}</div>}
                   </li>
                 ))}
               </ul>
@@ -329,11 +330,11 @@ export function NewOrderPage() {
               {items.map((it) => (
                 <li key={it.key}>
                   <span className="product-name">{it.full_product_name}</span> × {it.devices.length} 台
-                  {it.devices.some((d) => d.initial_status === 'excluded') &&
-                    `（已取走 ${it.devices.filter((d) => d.initial_status === 'excluded').length}）`}
+                  {it.item_note.trim() && <span className="device-note">⚠ {it.item_note.trim()}</span>}
                 </li>
               ))}
             </ul>
+            {h.order_note.trim() && <p className="small">訂單備註：{h.order_note.trim()}</p>}
             <p className="small muted">將建立 1 張訂單、{items.length} 項商品、{deviceTotal} 筆單機紀錄，並寫入異動紀錄。</p>
             <ErrorBanner error={error} />
             <div className="row gap end">
