@@ -190,17 +190,17 @@ export function OrderDetailPage() {
                       <td data-label="交付">{fmtDateTime(dev.delivered_at)}</td>
                       <td data-label="下一步">
                         {!active ? '—'
-                          : dev.status === 'pending_arrival' ? <button className="small-btn" onClick={() => setModal({ kind: 'arrival', device: dev, item: it })}>登記到貨</button>
+                          : dev.status === 'pending_arrival' ? <button className="step step-arrival" onClick={() => setModal({ kind: 'arrival', device: dev, item: it })}>登記到貨</button>
                           : dev.status === 'arrived_pending_notify' ? (
                             <div className="row gap wrap">
-                              <button className="small-btn" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>通知顧客</button>
-                              <button className="link small" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>直接交付</button>
+                              <button className="step step-notify" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>通知顧客</button>
+                              <button className="link small text-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>直接交付</button>
                             </div>
                           )
                           : dev.status === 'notified_pending_pickup' ? (
                             <div className="row gap wrap">
-                              <button className="small-btn" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成交付</button>
-                              <button className="link small" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>再次通知</button>
+                              <button className="step step-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成交付</button>
+                              <button className="link small text-notify" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>再次通知</button>
                             </div>
                           )
                           : '—'}
