@@ -224,7 +224,7 @@ const STEP_LABEL: Record<StepKey, string> = { arrival: '登記到貨', label: '�
 function stepsOf(d: Device): StepKey[] {
   const unlabeled = !d.is_labeled ? ['label' as const] : [];
   if (d.status === 'pending_arrival') return ['arrival'];
-  if (d.status === 'arrived_pending_notify') return [...unlabeled, 'notify'];
+  if (d.status === 'arrived_pending_notify') return [...unlabeled, 'notify', 'deliver'];
   if (d.status === 'notified_pending_pickup') return [...unlabeled, 'deliver'];
   return [];
 }
@@ -337,7 +337,15 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
         </tbody>
       </table>
       {action?.step === 'arrival' && <ArrivalDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
-      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} itemNote={action.note} onClose={() => setAction(null)} onSaved={reload} />}
+      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} itemNote={action.note}
+          others={(devices.data ?? [])
+            .filter((d) => d.order_id === action.device.order_id && d.id !== action.device.id
+              && ['arrived_pending_notify', 'notified_pending_pickup'].includes(d.status))
+            .map((d) => {
+              const it = (items.data ?? []).find((i) => i.item_id === d.order_item_id);
+              return { device: d, label: it?.full_product_name ?? '', note: notesOf(it?.item_note, d.note) };
+            })}
+          onClose={() => setAction(null)} onSaved={reload} />}
       {action?.step === 'notify' && (
         <NotifyDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload}
           others={(devices.data ?? [])

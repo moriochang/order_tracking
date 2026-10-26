@@ -302,3 +302,5 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 .device-note { color: #c93400; font-size: 0.82rem; font-weight: 500; margin-left: 8px; }
 .device-note.block { display: block; margin-left: 0; margin-top: 2px; }
 .alert.warn { background: var(--warn-bg); color: #93370d; }
+.delivery-pick { align-items: flex-start; }
+.delivery-pick input { margin-top: 5px; }

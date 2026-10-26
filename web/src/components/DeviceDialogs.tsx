@@ -145,23 +145,65 @@ export function NotifyDialog({ device, others, label, onClose, onSaved }: {
   );
 }
 
-export function DeliveryDialog({ device, label, itemNote, onClose, onSaved }: Props & { itemNote?: string | null }) {
+// 可一起交付的其他機器（同一張訂單、已登記到貨；待到貨的不會列入）
+export type DeliveryOther = { device: Device; label: string; note?: string };
+
+export function DeliveryDialog({ device, label, itemNote, others = [], onClose, onSaved }: Props & {
+  itemNote?: string | null; others?: DeliveryOther[];
+}) {
   const [note, setNote] = useState('');
-  const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
+  const [picked, setPicked] = useState<string[]>([device.id]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [done, setDone] = useState<string[]>([]);
+  const all: DeliveryOther[] = [{ device, label, note: notesOf(itemNote, device.note) }, ...others];
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  // 逐台交付；中途失敗時已完成的保留，畫面顯示失敗原因
+  async function deliver() {
+    setBusy(true); setError(null);
+    const ok: string[] = [...done];
+    try {
+      for (const o of all.filter((x) => picked.includes(x.device.id) && !ok.includes(x.device.id))) {
+        await rpc('complete_delivery', { p_device_id: o.device.id, p_expected_version: o.device.version, p_note: note.trim() || null });
+        ok.push(o.device.id);
+        setDone([...ok]);
+      }
+      onSaved(); onClose();
+    } catch (e) {
+      setError(e);
+      if (ok.length) onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const remaining = picked.filter((id) => !done.includes(id)).length;
   return (
     <Dialog title="完成交付" onClose={onClose}>
       <div className="stack">
-        <p className="product-name">{label}</p>
-        {device.sn ? <p>SN：<strong>{device.sn}</strong>（請與實機核對）</p> : <p className="small muted">這台沒有登記 SN。</p>}
-        {notesOf(itemNote, device.note) && <div className="alert warn">⚠ 備註：{notesOf(itemNote, device.note)}</div>}
-        {device.status === 'arrived_pending_notify' && <p className="small muted">這台尚未通知，交付時會自動記一筆「顧客到店」通知。</p>}
-        <label>交付備註（選填）<input value={note} placeholder="例：本人取貨、代領人姓名、黑貓單號" onChange={(e) => setNote(e.target.value)} /></label>
+        <div className="stack tight">
+          {all.map((o) => (
+            <label key={o.device.id} className="radio delivery-pick">
+              <input type="checkbox" checked={picked.includes(o.device.id)} disabled={busy || done.includes(o.device.id)}
+                onChange={() => toggle(o.device.id)} />
+              <span>
+                <span className="product-name">{o.label}</span>
+                {done.includes(o.device.id) && <span className="ok-text small">　✓ 已交付</span>}
+                <span className="small">　SN：<b>{o.device.sn ?? '無'}</b></span>
+                {o.note && <span className="device-note">⚠ {o.note}</span>}
+                {o.device.status === 'arrived_pending_notify' && <span className="small muted">（尚未通知，會自動記「顧客到店」）</span>}
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="small muted">請與實機核對 SN；有 ⚠ 備註的請先處理再交機。</p>
+        <label>交付備註（選填，套用到勾選的每一台）<input value={note} placeholder="例：本人取貨、代領人姓名、黑貓單號" onChange={(e) => setNote(e.target.value)} /></label>
         <ErrorBanner error={error} />
         <div className="row gap end">
-          <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy}
-            onClick={() => run(() => rpc('complete_delivery', { p_device_id: device.id, p_expected_version: device.version, p_note: note.trim() || null }))}>
-            {busy ? '處理中…' : '確認交付'}
+          <button className="secondary" onClick={onClose} disabled={busy}>取消</button>
+          <button disabled={busy || remaining === 0} onClick={deliver}>
+            {busy ? '處理中…' : `確認交付（${remaining} 台）`}
           </button>
         </div>
       </div>

@@ -143,7 +143,7 @@ export function TodoPage() {
                         {(tab === 'notify' || tab === 'pickup' || (tab === 'all' && r.status === 'arrived_pending_notify')) && (
                           <button type="button" className="step step-notify" onClick={() => setAction({ kind: 'notify', row: r })}>{r.status === 'notified_pending_pickup' ? '再次通知' : '通知顧客'}</button>
                         )}
-                        {(tab === 'pickup' || (tab === 'all' && r.status === 'notified_pending_pickup')) && (
+                        {(tab === 'pickup' || tab === 'notify' || (tab === 'all' && r.status !== 'pending_arrival')) && (
                           <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成交付</button>
                         )}
                       </div>
@@ -160,7 +160,11 @@ export function TodoPage() {
         <ArrivalDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'deliver' && (
-        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} itemNote={action.row.item_note} onClose={() => setAction(null)} onSaved={data.reload} />
+        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} itemNote={action.row.item_note}
+          others={all
+            .filter((r) => r.order_id === action.row.order_id && r.device_id !== action.row.device_id && r.status !== 'pending_arrival')
+            .map((r) => ({ device: toDevice(r), label: label(r), note: notesOf(r.item_note, r.note) }))}
+          onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'notify' && (
         <NotifyDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload}
