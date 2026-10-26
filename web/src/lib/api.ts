@@ -56,6 +56,13 @@ export async function searchBacklog(opts: { q: string; storeCode?: string; onlyB
   return unwrap(await query) as BacklogRow[];
 }
 
+// 訂單列表用：各訂單未取消商品的明細與狀態台數
+export async function itemsForOrders(orderIds: string[]) {
+  if (!orderIds.length) return [] as BacklogRow[];
+  return unwrap(await supabase.from('v_item_backlog').select('*').in('order_id', orderIds)
+    .order('created_at')) as BacklogRow[];
+}
+
 export async function loadOrder(orderId: string) {
   const [summary, items, devices, notifications, audit, scans] = await Promise.all([
     supabase.from('v_order_summary').select('*').eq('id', orderId).maybeSingle(),

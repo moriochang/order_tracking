@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
-import { searchBacklog, searchOrders } from '../lib/api';
+import { itemsForOrders, searchBacklog, searchOrders } from '../lib/api';
 import { fmtDate } from '../lib/format';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
 import type { BacklogRow, OrderSummary } from '../lib/types';
-import { ErrorBanner, useAsync } from '../components/ui';
+import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 export function OrdersPage() {
   const me = useMe();
@@ -98,14 +98,20 @@ function BacklogTable({ rows }: { rows: BacklogRow[] }) {
   );
 }
 
+// 商品各狀態台數（只列有台數的狀態）
+const ITEM_STATUSES = ['pending_arrival', 'arrived_pending_notify', 'notified_pending_pickup', 'delivered', 'excluded'] as const;
+
 export function OrderTable({ orders }: { orders: OrderSummary[] }) {
+  const ids = orders.map((o) => o.id);
+  const items = useAsync(() => itemsForOrders(ids), [ids.join(',')]);
+  const itemsOf = (orderId: string) => (items.data ?? []).filter((i) => i.order_id === orderId);
   return (
     <div className="table-wrap">
       <table className="list">
         <thead>
           <tr>
             <th>訂單編號</th><th>顧客</th><th>電話</th><th>結帳日期</th><th>機號</th><th>序號</th><th>預結號碼</th>
-            <th>商品／台數</th><th>進度</th><th>備註</th>
+            <th>商品明細</th><th>狀態</th><th>備註</th>
           </tr>
         </thead>
         <tbody>
@@ -118,8 +124,26 @@ export function OrderTable({ orders }: { orders: OrderSummary[] }) {
               <td data-label="機號">{o.register_no}</td>
               <td data-label="序號">{o.receipt_seq}</td>
               <td data-label="預結號碼">{o.receipt_no ?? '—'}</td>
-              <td data-label="商品／台數">{o.item_count} 項／{o.device_total} 台</td>
-              <td data-label="進度"><OrderProgress o={o} /></td>
+              <td data-label="商品明細">
+                {o.order_status === 'cancelled' ? '—' : (
+                  <div className="item-lines">
+                    {itemsOf(o.id).map((i) => <div key={i.item_id} className="product-name">{i.full_product_name} × {i.ordered_qty}</div>)}
+                  </div>
+                )}
+              </td>
+              <td data-label="狀態">
+                {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : (
+                  <div className="item-lines">
+                    {itemsOf(o.id).map((i) => (
+                      <div key={i.item_id} className="row gap">
+                        {ITEM_STATUSES.filter((s) => i[s] > 0).map((s) => (
+                          <span key={s}><StatusBadge status={s} />{i[s] > 1 ? ` ×${i[s]}` : ''}</span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </td>
               <td data-label="備註" className="clip">{o.order_note ?? ''}</td>
             </tr>
           ))}
