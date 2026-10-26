@@ -5,7 +5,7 @@
 set -euo pipefail
 
 CONF="$HOME/.order-tracking-backup.conf"
-[ -f "$CONF" ] || { echo "找不到設定檔 $CONF，請先執行 setup.sh"; exit 1; }
+[ -f "$CONF" ] || { echo "找不到設定檔 ${CONF}，請先執行 setup.sh"; exit 1; }
 # shellcheck source=/dev/null
 source "$CONF"   # BACKUP_DIR、PG_BIN
 
@@ -24,7 +24,7 @@ TMP="$OUT.partial"
 gzip -dc "$TMP" | tail -n 5 | grep -q "PostgreSQL database dump complete" \
   || { rm -f "$TMP"; echo "備份不完整，已刪除"; exit 1; }
 mv "$TMP" "$OUT"
-echo "$(TZ=Asia/Taipei date '+%F %T') 備份完成：$OUT（$(du -h "$OUT" | cut -f1)）"
+echo "$(TZ=Asia/Taipei date '+%F %T') 備份完成：${OUT}（$(du -h "$OUT" | cut -f1)）"
 
 # 保留規則：最近 14 天每天一份；每月 1 日的備份永久保留
 find "$BACKUP_DIR" -name 'order_tracking_*.sql.gz' -mtime +14 | while read -r f; do
