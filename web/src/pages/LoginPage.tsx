@@ -66,6 +66,7 @@ export function LoginPage() {
         </button>
         <p className="login-note">請使用公司帳號 @{ALLOWED_EMAIL_DOMAIN}<br />帳號由管理者開通後才能使用</p>
       </div>
+      <footer className="login-footer">TC © 2026</footer>
     </div>
   );
 }
