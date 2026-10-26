@@ -44,6 +44,7 @@ a { color: var(--primary); }
 .nav-disabled { color: var(--muted); cursor: not-allowed; }
 .who { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 main { padding: 16px; max-width: 1680px; margin: 0 auto; }
+@media (min-width: 800px) { main { padding: 28px 40px; } }
 @media (min-width: 800px) {
   .topbar nav { order: 0; width: auto; }
 }
@@ -205,3 +206,8 @@ td[data-label='已貼'] input[type='checkbox'] { accent-color: #7a5af8; }
 .item-lines > div + div { margin-top: 4px; }
 .item-lines button.step { min-height: 0; padding: 2px 8px; font-size: 0.8rem; line-height: 1.4; border-radius: 999px; }
 @media (min-width: 800px) { table.list td.nowrap { white-space: nowrap; } }
+/* 列表放在白色卡片裡，與頁面背景分層 */
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06); padding: 8px 16px; }
+.table-card table.list th { background: var(--inset); }
+@media (max-width: 799px) { .table-card { background: none; border: none; box-shadow: none; padding: 0; } }

@@ -75,7 +75,7 @@ function BacklogTable({ rows: raw, all }: { rows: BacklogRow[]; all: boolean }) 
   return (
     <div className="stack">
       <div><strong>欠貨 {totalBacklog} 台</strong>（{orders} 張訂單）</div>
-      <div className="table-wrap">
+      <div className="table-wrap table-card">
         <table className="list">
           <thead>
             <tr>
@@ -167,7 +167,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
   }
 
   return (
-    <div className="table-wrap">
+    <div className="table-wrap table-card">
       <ErrorBanner error={opError} />
       <table className="list">
         <thead>
@@ -192,8 +192,8 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="序號">{o.receipt_seq}</td>
                 <td data-label="預結號碼">{o.receipt_no ?? '—'}</td>
                 <td data-label="商品明細">
-                  {cell((l, i) => (
-                    <span className="product-name">{i + 1}. {l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</span>
+                  {cell((l) => (
+                    <span className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</span>
                   ))}
                 </td>
                 <td data-label="數量">{cell((l) => l.groupQty ?? '')}</td>
@@ -201,9 +201,9 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                   {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : cell((l) => <StatusBadge status={l.device.status} />)}
                 </td>
                 <td data-label="操作">
-                  {cell((l, i) => stepsOf(l.device).map((step) => (
+                  {cell((l) => stepsOf(l.device).map((step) => (
                     <button key={step} type="button" className={`step step-${step}`}
-                      onClick={() => start(step, l.device, `${o.order_no}・${i + 1}. ${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
+                      onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
                       {STEP_LABEL[step]}
                     </button>
                   )))}
