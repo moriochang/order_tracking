@@ -246,15 +246,15 @@ export function OrderDetailPage() {
       </section>
 
       {modal?.kind === 'edit_order' && <EditOrderDialog order={o} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} label={unitName(modal.device)} itemNote={modal.item.item_note}
+      {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} label={unitName(modal.device)} order={{ no: o.order_no, customer: o.customer_name }} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} label={unitName(modal.device)} order={{ no: o.order_no, customer: o.customer_name }} itemNote={modal.item.item_note}
           others={d.devices
             .filter((x) => x.id !== modal.device.id && ['arrived_pending_notify', 'notified_pending_pickup'].includes(x.status))
             .map((x) => ({ device: x, label: unitName(x), note: itemById.get(x.order_item_id)?.item_note ?? undefined }))}
           onClose={close} onSaved={reload} />}
-      {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} label={unitName(modal.device)} order={{ no: o.order_no, customer: o.customer_name }} onClose={close} onSaved={reload} />}
       {modal?.kind === 'notify' && (
-        <NotifyDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload}
+        <NotifyDialog device={modal.device} label={unitName(modal.device)} order={{ no: o.order_no, customer: o.customer_name }} onClose={close} onSaved={reload}
           others={d.devices
             .filter((x) => x.id !== modal.device.id && ['arrived_pending_notify', 'notified_pending_pickup'].includes(x.status))
             .map((x) => ({ device: x, label: `${unitName(x)}・${STATUS_LABEL[x.status]}` }))} />

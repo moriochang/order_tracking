@@ -6,7 +6,7 @@ import { fmtDate, todayTaipei } from '../lib/format';
 import { exportCsv, exportXlsx } from '../lib/exportOrders';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
-import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf } from '../components/DeviceDialogs';
+import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf, type OrderRef } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 const PERIODS = [
@@ -236,7 +236,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
   const ids = orders.map((o) => o.id);
   const items = useAsync(() => itemsForOrders(ids), [ids.join(',')]);
   const devices = useAsync(() => devicesForOrders(ids), [ids.join(',')]);
-  const [action, setAction] = useState<{ step: StepKey; device: Device; label: string; note?: string } | null>(null);
+  const [action, setAction] = useState<{ step: StepKey; device: Device; label: string; note?: string; order: OrderRef } | null>(null);
   const [opError, setOpError] = useState<unknown>(null);
   const reload = () => { items.reload(); devices.reload(); onChanged?.(); };
 
@@ -254,9 +254,9 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
     return lines;
   }
 
-  async function start(step: StepKey, device: Device, label: string, note?: string) {
+  async function start(step: StepKey, device: Device, label: string, note: string, order: OrderRef) {
     setOpError(null);
-    if (step !== 'label') { setAction({ step, device, label, note }); return; }
+    if (step !== 'label') { setAction({ step, device, label, note, order }); return; }
     try {
       await rpc('set_labeled', { p_device_id: device.id, p_expected_version: device.version, p_labeled: true });
       reload();
@@ -302,7 +302,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                             <StatusBadge status={l.device.status} />
                             {stepsOf(l.device).map((step) => (
                               <button key={step} type="button" className={`step step-${step}`}
-                                onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note)}>
+                                onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name })}>
                                 {STEP_LABEL[step]}
                               </button>
                             ))}
@@ -325,7 +325,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="操作" className="desk-only">
                   {cell((l) => stepsOf(l.device).map((step) => (
                     <button key={step} type="button" className={`step step-${step}`}
-                      onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note)}>
+                      onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name })}>
                       {STEP_LABEL[step]}
                     </button>
                   )))}
@@ -336,8 +336,8 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
           })}
         </tbody>
       </table>
-      {action?.step === 'arrival' && <ArrivalDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
-      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} itemNote={action.note}
+      {action?.step === 'arrival' && <ArrivalDialog device={action.device} label={action.label} order={action.order} onClose={() => setAction(null)} onSaved={reload} />}
+      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} order={action.order} itemNote={action.note}
           others={(devices.data ?? [])
             .filter((d) => d.order_id === action.device.order_id && d.id !== action.device.id
               && ['arrived_pending_notify', 'notified_pending_pickup'].includes(d.status))
@@ -347,7 +347,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
             })}
           onClose={() => setAction(null)} onSaved={reload} />}
       {action?.step === 'notify' && (
-        <NotifyDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload}
+        <NotifyDialog device={action.device} label={action.label} order={action.order} onClose={() => setAction(null)} onSaved={reload}
           others={(devices.data ?? [])
             .filter((d) => d.order_id === action.device.order_id && d.id !== action.device.id
               && ['arrived_pending_notify', 'notified_pending_pickup'].includes(d.status))

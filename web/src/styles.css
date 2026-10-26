@@ -304,3 +304,5 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 .alert.warn { background: var(--warn-bg); color: #93370d; }
 .delivery-pick { align-items: flex-start; }
 .delivery-pick input { margin-top: 5px; }
+.dialog-order { background: var(--bg); border-radius: 10px; padding: 6px 12px; font-size: 0.9rem; color: var(--muted); }
+.dialog-order b { color: var(--text); font-weight: 600; }

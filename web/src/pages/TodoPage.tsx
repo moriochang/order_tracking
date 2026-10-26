@@ -62,7 +62,8 @@ export function TodoPage() {
   const all = data.data ?? [];
   const rows = all.filter((r) => inTab(r, tab))
     .sort((a, b) => since(a, tab).localeCompare(since(b, tab)) || a.order_no.localeCompare(b.order_no) || a.unit_no - b.unit_no);
-  const label = (r: TodoRow) => `${r.order_no}・${r.full_product_name}${r.sn ? `（${r.sn}）` : ''}`;
+  const label = (r: TodoRow) => `${r.full_product_name}${r.sn ? `（${r.sn}）` : ''}`;
+  const orderOf = (r: TodoRow) => ({ no: r.order_no, customer: r.customer_name });
 
   async function markLabeled(r: TodoRow) {
     setOpError(null);
@@ -157,17 +158,17 @@ export function TodoPage() {
       ))}
 
       {action?.kind === 'arrival' && (
-        <ArrivalDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
+        <ArrivalDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'deliver' && (
-        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} itemNote={action.row.item_note}
+        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} itemNote={action.row.item_note}
           others={all
             .filter((r) => r.order_id === action.row.order_id && r.device_id !== action.row.device_id && r.status !== 'pending_arrival')
             .map((r) => ({ device: toDevice(r), label: label(r), note: notesOf(r.item_note, r.note) }))}
           onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'notify' && (
-        <NotifyDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload}
+        <NotifyDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} onClose={() => setAction(null)} onSaved={data.reload}
           others={all
             .filter((r) => r.order_id === action.row.order_id && r.device_id !== action.row.device_id && r.status !== 'pending_arrival')
             .map((r) => ({ device: toDevice(r), label: label(r) }))} />

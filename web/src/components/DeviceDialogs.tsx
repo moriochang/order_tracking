@@ -9,7 +9,14 @@ import type { Device } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
 import { useSubmit } from './OrderDialogs';
 
-type Props = { device: Device; label: string; onClose: () => void; onSaved: () => void };
+// 視窗上方的訂單資訊（訂單編號、顧客），與下方的商品分開顯示
+export type OrderRef = { no: string; customer: string };
+function OrderHeader({ order }: { order?: OrderRef }) {
+  if (!order) return null;
+  return <div className="dialog-order">訂單 <b>{order.no}</b>　顧客 <b>{order.customer}</b></div>;
+}
+
+type Props = { device: Device; label: string; order?: OrderRef; onClose: () => void; onSaved: () => void };
 
 // 商品備註與單機備註合併成一則提示（例如「AC+」）
 export const notesOf = (itemNote: string | null | undefined, deviceNote: string | null | undefined) =>
@@ -77,7 +84,7 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
 }
 
 
-export function ArrivalDialog({ device, label, onClose, onSaved }: Props) {
+export function ArrivalDialog({ device, label, order, onClose, onSaved }: Props) {
   const [sn, setSn] = useState('');
   // Mac、iPad、iPhone、Apple Watch、AirPods、HomePod 必須登記 SN（由資料庫依產品分類判斷）
   const [required, setRequired] = useState<boolean | null>(null);
@@ -89,6 +96,7 @@ export function ArrivalDialog({ device, label, onClose, onSaved }: Props) {
   return (
     <Dialog title="登記到貨" onClose={onClose}>
       <div className="stack">
+        <OrderHeader order={order} />
         <p className="product-name">{label}</p>
         <SnInput label={required ? 'SN（必填）' : required === false ? 'SN（配件沒有 SN 可留空）' : 'SN'} value={sn} onChange={setSn} />
         {required && <p className="small warn-text">此商品屬於 Mac、iPad、iPhone、Apple Watch、AirPods、HomePod，必須登記 SN。</p>}
@@ -107,8 +115,8 @@ export function ArrivalDialog({ device, label, onClose, onSaved }: Props) {
 }
 
 // 通知：預設只通知這一台，可勾選同訂單其他已到貨的機器一起記錄
-export function NotifyDialog({ device, others, label, onClose, onSaved }: {
-  device: Device; others: { device: Device; label: string }[]; label: string; onClose: () => void; onSaved: () => void;
+export function NotifyDialog({ device, others, label, order, onClose, onSaved }: {
+  device: Device; others: { device: Device; label: string }[]; label: string; order?: OrderRef; onClose: () => void; onSaved: () => void;
 }) {
   const [picked, setPicked] = useState<string[]>([device.id]);
   const [method, setMethod] = useState('phone');
@@ -119,6 +127,7 @@ export function NotifyDialog({ device, others, label, onClose, onSaved }: {
   return (
     <Dialog title="通知顧客" onClose={onClose}>
       <div className="stack">
+        <OrderHeader order={order} />
         <div className="stack tight">
           <label className="radio"><input type="checkbox" checked={picked.includes(device.id)} onChange={() => toggle(device.id)} />{label}</label>
           {others.map((o) => (
@@ -155,7 +164,7 @@ export function NotifyDialog({ device, others, label, onClose, onSaved }: {
 // 可一起交付的其他機器（同一張訂單、已登記到貨；待到貨的不會列入）
 export type DeliveryOther = { device: Device; label: string; note?: string };
 
-export function DeliveryDialog({ device, label, itemNote, others = [], onClose, onSaved }: Props & {
+export function DeliveryDialog({ device, label, order, itemNote, others = [], onClose, onSaved }: Props & {
   itemNote?: string | null; others?: DeliveryOther[];
 }) {
   const [note, setNote] = useState('');
@@ -189,6 +198,7 @@ export function DeliveryDialog({ device, label, itemNote, others = [], onClose, 
   return (
     <Dialog title="完成交付" onClose={onClose}>
       <div className="stack">
+        <OrderHeader order={order} />
         <div className="stack tight">
           {all.map((o) => (
             <label key={o.device.id} className="radio delivery-pick">
@@ -218,13 +228,14 @@ export function DeliveryDialog({ device, label, itemNote, others = [], onClose, 
   );
 }
 
-export function CorrectSnDialog({ device, label, onClose, onSaved }: Props) {
+export function CorrectSnDialog({ device, label, order, onClose, onSaved }: Props) {
   const [sn, setSn] = useState(device.sn ?? '');
   const [reason, setReason] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
     <Dialog title={device.sn ? '更正 SN' : '補登 SN'} onClose={onClose}>
       <div className="stack">
+        <OrderHeader order={order} />
         <p className="product-name">{label}</p>
         <SnInput label="正確的 SN" value={sn} onChange={setSn} />
         <label>更正原因（必填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
