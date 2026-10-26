@@ -126,7 +126,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 @media (min-width: 700px) { .tiles { grid-template-columns: repeat(5, 1fr); } }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-.tile.stat { background: var(--inset); }
+.tile.stat { background: var(--tile-color, var(--inset)); }
 .tile-num { font-size: 1.8rem; font-weight: 700; }
 .tile-label { color: var(--muted); font-size: 0.9rem; }
 
@@ -245,15 +245,15 @@ td.mobile-only { display: none; }
   .unit-delivered { border-left-color: #1b7f3b; }
 }
 a.tile-link { color: inherit; text-decoration: none; }
-a.tile-link:hover { border-color: var(--primary); box-shadow: 0 1px 4px rgba(31, 95, 191, 0.15); }
 tr.overdue td { background: #fdecea; }
 .overdue-days { color: var(--danger); font-weight: 700; }
-/* 首頁數字方塊：顏色與狀態／操作按鈕一致 */
-.tile { border-left: 5px solid var(--tile-color, var(--border)); background: var(--tile-bg, var(--surface)); }
-.tile .tile-num { color: var(--tile-color, var(--text)); }
-.tile .tile-label { color: var(--text); font-weight: 500; }
-.tile-pending_arrival { --tile-color: #475467; --tile-bg: #f2f4f7; }
-.tile-arrived_pending_notify { --tile-color: #dc6803; --tile-bg: #fff6ea; }
-.tile-pending_label { --tile-color: #7a5af8; --tile-bg: #f4f1ff; }
-.tile-notified_pending_pickup { --tile-color: #1f5fbf; --tile-bg: #eef4ff; }
-.tile-delivered { --tile-color: #1b7f3b; --tile-bg: #ecf8f0; }
+/* 首頁數字方塊：整塊填色，顏色與狀態／操作按鈕一致 */
+.tile { background: var(--tile-color, var(--surface)); border-color: var(--tile-color, var(--border)); }
+.tile .tile-num, .tile .tile-label { color: #fff; }
+.tile .tile-label { opacity: 0.92; }
+.tile-pending_arrival { --tile-color: #475467; }
+.tile-arrived_pending_notify { --tile-color: #dc6803; }
+.tile-pending_label { --tile-color: #7a5af8; }
+.tile-notified_pending_pickup { --tile-color: #1f5fbf; }
+.tile-delivered { --tile-color: #1b7f3b; }
+a.tile-link:hover { border-color: var(--tile-color); filter: brightness(1.08); box-shadow: 0 2px 6px rgba(16, 24, 40, 0.18); }
