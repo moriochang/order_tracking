@@ -16,7 +16,7 @@ export function OrdersPage() {
   const all = params.get('all') === '1';   // 型號查詢：也列出沒有欠貨的
   const [input, setInput] = useState(q);
   const result = useAsync(() => (byModel ? Promise.resolve(null) : searchOrders({ q, storeCode: store || undefined })), [q, store, byModel]);
-  const backlog = useAsync(() => (byModel ? searchBacklog({ q, storeCode: store || undefined, onlyBacklog: !all }) : Promise.resolve(null)),
+  const backlog = useAsync(() => (byModel ? searchBacklog({ q, storeCode: store || undefined, onlyBacklog: false }) : Promise.resolve(null)),
     [q, store, byModel, all]);
   const setParam = (k: string, v: string) => setParams((p) => { if (v) p.set(k, v); else p.delete(k); return p; });
 
@@ -51,7 +51,7 @@ export function OrdersPage() {
           <ErrorBanner error={backlog.error} />
           {backlog.loading && <div className="muted">載入中…</div>}
           {!q && <div className="muted">輸入型號或品名後搜尋。欠貨＝尚未到貨的台數，依結帳日期由舊到新排列。</div>}
-          {q && backlog.data && (backlog.data.length ? <BacklogTable rows={backlog.data} /> : <div className="muted">沒有符合的商品。</div>)}
+          {q && backlog.data && (backlog.data.length ? <BacklogTable rows={backlog.data} all={all} /> : <div className="muted">沒有符合的商品。</div>)}
         </>
       ) : (
         <>
@@ -65,7 +65,10 @@ export function OrdersPage() {
   );
 }
 
-function BacklogTable({ rows }: { rows: BacklogRow[] }) {
+// 先合併同訂單同商品再篩選欠貨，訂購數才會是整張單的數量
+function BacklogTable({ rows: raw, all }: { rows: BacklogRow[]; all: boolean }) {
+  const rows = groupByProduct(raw).filter((r) => all || r.pending_arrival > 0);
+  if (!rows.length) return <div className="muted">目前沒有欠貨。勾選「顯示全部（含已到貨）」可查看已到貨的訂單。</div>;
   const totalBacklog = rows.reduce((s, r) => s + r.pending_arrival, 0);
   const orders = new Set(rows.filter((r) => r.pending_arrival > 0).map((r) => r.order_id)).size;
   return (
@@ -75,7 +78,7 @@ function BacklogTable({ rows }: { rows: BacklogRow[] }) {
         <table className="list">
           <thead>
             <tr>
-              <th>結帳日期</th><th>訂單編號</th><th>顧客</th><th>品名</th><th>訂購</th><th>欠貨</th><th>已到貨未交付</th><th>已交付／取走</th>
+              <th>結帳日期</th><th>訂單編號</th><th>顧客</th><th>品名</th><th>訂購</th><th>欠貨</th><th>已到貨未交付</th><th>已交付</th>
             </tr>
           </thead>
           <tbody>
@@ -88,7 +91,7 @@ function BacklogTable({ rows }: { rows: BacklogRow[] }) {
                 <td data-label="訂購">{r.ordered_qty}</td>
                 <td data-label="欠貨"><strong>{r.pending_arrival}</strong></td>
                 <td data-label="已到貨未交付">{r.arrived_pending_notify + r.notified_pending_pickup}</td>
-                <td data-label="已交付／取走">{r.delivered + r.excluded}</td>
+                <td data-label="已交付">{r.delivered + r.excluded}</td>
               </tr>
             ))}
           </tbody>
@@ -101,11 +104,12 @@ function BacklogTable({ rows }: { rows: BacklogRow[] }) {
 // 商品各狀態台數（只列有台數的狀態）
 const ITEM_STATUSES = ['pending_arrival', 'arrived_pending_notify', 'notified_pending_pickup', 'delivered', 'excluded'] as const;
 
-// 同一張訂單裡相同商品（一次訂多台或分開加入）合併為一列，數量與各狀態台數相加
+// 同一張訂單裡相同商品（一次訂多台或分開加入）合併為一列，數量與各狀態台數相加（保持原本順序）
 function groupByProduct(rows: BacklogRow[]): BacklogRow[] {
   const out: BacklogRow[] = [];
   for (const r of rows) {
-    const g = out.find((x) => x.full_product_name === r.full_product_name && x.model === r.model && x.barcode === r.barcode);
+    const g = out.find((x) => x.order_id === r.order_id
+      && x.full_product_name === r.full_product_name && x.model === r.model && x.barcode === r.barcode);
     if (!g) { out.push({ ...r }); continue; }
     g.ordered_qty += r.ordered_qty;
     for (const s of ITEM_STATUSES) g[s] += r[s];
