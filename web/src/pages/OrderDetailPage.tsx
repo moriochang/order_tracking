@@ -251,7 +251,7 @@ export function OrderDetailPage() {
 
       {modal?.kind === 'edit_order' && <EditOrderDialog order={o} onClose={close} onSaved={reload} />}
       {modal?.kind === 'arrival' && <ArrivalDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
-      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'deliver' && <DeliveryDialog device={modal.device} label={unitName(modal.device)} itemNote={modal.item.item_note} onClose={close} onSaved={reload} />}
       {modal?.kind === 'note' && <DeviceNoteDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'sn' && <CorrectSnDialog device={modal.device} label={unitName(modal.device)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'notify' && (

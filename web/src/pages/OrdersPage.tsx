@@ -6,7 +6,7 @@ import { fmtDate, todayTaipei } from '../lib/format';
 import { exportCsv, exportXlsx } from '../lib/exportOrders';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
-import { ArrivalDialog, DeliveryDialog, NotifyDialog } from '../components/DeviceDialogs';
+import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 const PERIODS = [
@@ -230,13 +230,13 @@ function stepsOf(d: Device): StepKey[] {
 }
 
 // 每台單機各佔一行（同商品相鄰排列），登記到貨等操作才知道是哪一台；每行數量為 1
-type UnitLine = { device: Device; name: string };
+type UnitLine = { device: Device; name: string; note: string };
 
 export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onChanged?: () => void }) {
   const ids = orders.map((o) => o.id);
   const items = useAsync(() => itemsForOrders(ids), [ids.join(',')]);
   const devices = useAsync(() => devicesForOrders(ids), [ids.join(',')]);
-  const [action, setAction] = useState<{ step: StepKey; device: Device; label: string } | null>(null);
+  const [action, setAction] = useState<{ step: StepKey; device: Device; label: string; note?: string } | null>(null);
   const [opError, setOpError] = useState<unknown>(null);
   const reload = () => { items.reload(); devices.reload(); onChanged?.(); };
 
@@ -248,14 +248,15 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
       const devs = (devices.data ?? [])
         .filter((d) => g.item_ids.includes(d.order_item_id))
         .sort((x, y) => g.item_ids.indexOf(x.order_item_id) - g.item_ids.indexOf(y.order_item_id) || x.unit_no - y.unit_no);
-      devs.forEach((d) => lines.push({ device: d, name: g.full_product_name }));
+      const itemNote = (id: string) => its.find((i) => i.item_id === id)?.item_note;
+      devs.forEach((d) => lines.push({ device: d, name: g.full_product_name, note: notesOf(itemNote(d.order_item_id), d.note) }));
     }
     return lines;
   }
 
-  async function start(step: StepKey, device: Device, label: string) {
+  async function start(step: StepKey, device: Device, label: string, note?: string) {
     setOpError(null);
-    if (step !== 'label') { setAction({ step, device, label }); return; }
+    if (step !== 'label') { setAction({ step, device, label, note }); return; }
     try {
       await rpc('set_labeled', { p_device_id: device.id, p_expected_version: device.version, p_labeled: true });
       reload();
@@ -296,12 +297,12 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                       {lines.map((l) => (
                         <div key={l.device.id} className={`unit-card unit-${l.device.status}`}>
                           <div className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</div>
-                          {l.device.note && <div className="device-note block">⚠ {l.device.note}</div>}
+                          {l.note && <div className="device-note block">⚠ {l.note}</div>}
                           <div className="row gap wrap">
                             <StatusBadge status={l.device.status} />
                             {stepsOf(l.device).map((step) => (
                               <button key={step} type="button" className={`step step-${step}`}
-                                onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
+                                onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note)}>
                                 {STEP_LABEL[step]}
                               </button>
                             ))}
@@ -314,7 +315,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="商品明細" className="desk-only">
                   {cell((l) => (
                     <span className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}
-                      {l.device.note && <span className="device-note">⚠ {l.device.note}</span>}</span>
+                      {l.note && <span className="device-note">⚠ {l.note}</span>}</span>
                   ))}
                 </td>
                 <td data-label="數量" className="desk-only">{cell(() => 1)}</td>
@@ -324,7 +325,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="操作" className="desk-only">
                   {cell((l) => stepsOf(l.device).map((step) => (
                     <button key={step} type="button" className={`step step-${step}`}
-                      onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`)}>
+                      onClick={() => start(step, l.device, `${o.order_no}・${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note)}>
                       {STEP_LABEL[step]}
                     </button>
                   )))}
@@ -336,7 +337,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
         </tbody>
       </table>
       {action?.step === 'arrival' && <ArrivalDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
-      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload} />}
+      {action?.step === 'deliver' && <DeliveryDialog device={action.device} label={action.label} itemNote={action.note} onClose={() => setAction(null)} onSaved={reload} />}
       {action?.step === 'notify' && (
         <NotifyDialog device={action.device} label={action.label} onClose={() => setAction(null)} onSaved={reload}
           others={(devices.data ?? [])

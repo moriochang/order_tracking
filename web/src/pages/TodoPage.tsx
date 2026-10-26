@@ -5,7 +5,7 @@ import { useMe } from '../auth/AuthProvider';
 import { listTodo, rpc } from '../lib/api';
 import { fmtDate, todayTaipei } from '../lib/format';
 import type { Device, TodoRow } from '../lib/types';
-import { ArrivalDialog, DeliveryDialog, NotifyDialog } from '../components/DeviceDialogs';
+import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 const PICKUP_OVERDUE_DAYS = 14;   // 通知後超過幾天未取貨標紅
@@ -129,7 +129,7 @@ export function TodoPage() {
                     <td data-label="顧客" className="nowrap">{r.customer_name}</td>
                     <td data-label="電話" className="nowrap">{r.customer_phone}</td>
                     <td data-label="品名"><span className="product-name">{r.full_product_name}</span>
-                      {r.note && <div className="device-note block">⚠ {r.note}</div>}</td>
+                      {notesOf(r.item_note, r.note) && <div className="device-note block">⚠ {notesOf(r.item_note, r.note)}</div>}</td>
                     <td data-label="SN">{r.sn ?? '—'}</td>
                     <td data-label="狀態"><StatusBadge status={r.status} /></td>
                     <td data-label="操作">
@@ -160,7 +160,7 @@ export function TodoPage() {
         <ArrivalDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'deliver' && (
-        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
+        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} itemNote={action.row.item_note} onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'notify' && (
         <NotifyDialog device={toDevice(action.row)} label={label(action.row)} onClose={() => setAction(null)} onSaved={data.reload}

@@ -77,6 +77,7 @@ export type BacklogRow = {
   notified_pending_pickup: number;
   delivered: number;
   excluded: number;
+  item_note: string | null;
 };
 
 export type TodoRow = {
@@ -100,6 +101,7 @@ export type TodoRow = {
   customer_phone: string;
   purchase_date: string;
   order_created_at: string;
+  item_note: string | null;
 };
 
 export type OrderItem = {

@@ -11,6 +11,10 @@ import { useSubmit } from './OrderDialogs';
 
 type Props = { device: Device; label: string; onClose: () => void; onSaved: () => void };
 
+// 商品備註與單機備註合併成一則提示（例如「AC+」）
+export const notesOf = (itemNote: string | null | undefined, deviceNote: string | null | undefined) =>
+  [itemNote, deviceNote].filter(Boolean).join('・');
+
 // SN 輸入：可手動輸入或拍包裝盒標籤辨識；英文 O 自動改為 0
 function SnInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const [busy, setBusy] = useState(false);
@@ -141,7 +145,7 @@ export function NotifyDialog({ device, others, label, onClose, onSaved }: {
   );
 }
 
-export function DeliveryDialog({ device, label, onClose, onSaved }: Props) {
+export function DeliveryDialog({ device, label, itemNote, onClose, onSaved }: Props & { itemNote?: string | null }) {
   const [note, setNote] = useState('');
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   return (
@@ -149,7 +153,7 @@ export function DeliveryDialog({ device, label, onClose, onSaved }: Props) {
       <div className="stack">
         <p className="product-name">{label}</p>
         {device.sn ? <p>SN：<strong>{device.sn}</strong>（請與實機核對）</p> : <p className="small muted">這台沒有登記 SN。</p>}
-        {device.note && <div className="alert warn">⚠ 單機備註：{device.note}</div>}
+        {notesOf(itemNote, device.note) && <div className="alert warn">⚠ 備註：{notesOf(itemNote, device.note)}</div>}
         {device.status === 'arrived_pending_notify' && <p className="small muted">這台尚未通知，交付時會自動記一筆「顧客到店」通知。</p>}
         <label>交付備註（選填）<input value={note} placeholder="例：本人取貨、代領人姓名" onChange={(e) => setNote(e.target.value)} /></label>
         <ErrorBanner error={error} />
