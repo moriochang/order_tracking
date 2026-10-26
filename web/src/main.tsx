@@ -28,20 +28,18 @@ function Gate() {
   if (state.kind === 'signed_out') return <LoginPage />;
   if (state.kind === 'not_provisioned' || state.kind === 'error') {
     return (
-      <div className="center-card card">
-        <h1>{state.kind === 'error' ? '無法載入帳號' : '帳號尚未開通'}</h1>
-        <p>
+      <div className="login-page"><div className="login-card">
+        <h1 className="login-title">{state.kind === 'error' ? '無法載入帳號' : '帳號尚未開通'}</h1>
+        <p className="login-subtitle">
           {state.kind === 'error'
             ? state.message
             : !state.email?.toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`)
               ? `${state.email ?? '此帳號'} 不是公司帳號，請登出後改用 @${ALLOWED_EMAIL_DOMAIN} 帳號登入。`
               : `${state.email} 已登入，但尚未被管理者開通或已停用。請聯絡管理者。`}
         </p>
-        <div className="row gap">
-          <button onClick={refresh}>重新檢查</button>
-          <button className="secondary" onClick={logout}>登出</button>
-        </div>
-      </div>
+        <button className="login-button" onClick={refresh}>重新檢查</button>
+        <button className="link" onClick={logout}>登出</button>
+      </div></div>
     );
   }
 

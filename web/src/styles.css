@@ -265,3 +265,18 @@ button.todo-tab-notify { --tab-color: #dc6803; }
 button.todo-tab-label { --tab-color: #7a5af8; }
 button.todo-tab-pickup { --tab-color: #1f5fbf; }
 button.todo-tab-all { --tab-color: #1c1f24; }
+/* 登入頁：簡潔的淺灰背景、大圓角卡片、膠囊按鈕 */
+.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+  background: radial-gradient(1200px 600px at 50% -10%, #ffffff 0%, #f5f5f7 60%, #ececf0 100%); }
+.login-card { width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.82); backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); border: 1px solid rgba(0, 0, 0, 0.06); border-radius: 22px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); padding: 44px 36px 32px; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+.login-icon { width: 60px; height: 60px; margin: 0 auto 4px; border-radius: 16px; display: grid; place-items: center;
+  color: #fff; background: linear-gradient(180deg, #2b2b2e, #1d1d1f); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+.login-title { font-size: 1.85rem; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; margin: 0; }
+.login-subtitle { color: #6e6e73; font-size: 1.05rem; margin: -6px 0 10px; }
+button.login-button { width: 100%; min-height: 50px; border-radius: 999px; border: 1px solid #1d1d1f; background: #1d1d1f; color: #fff;
+  font-size: 1.02rem; font-weight: 500; gap: 10px; transition: background 0.15s; }
+button.login-button svg { background: #fff; border-radius: 50%; padding: 2px; width: 22px; height: 22px; }
+button.login-button:hover:not(:disabled) { background: #333336; }
+.login-note { color: #86868b; font-size: 0.82rem; line-height: 1.6; margin: 6px 0 0; }
