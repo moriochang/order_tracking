@@ -128,7 +128,8 @@ export function TodoPage() {
                     <td data-label="訂單編號" className="nowrap"><Link to={`/orders/${r.order_id}`}>{r.order_no}</Link></td>
                     <td data-label="顧客" className="nowrap">{r.customer_name}</td>
                     <td data-label="電話" className="nowrap">{r.customer_phone}</td>
-                    <td data-label="品名" className="product-name">{r.full_product_name}</td>
+                    <td data-label="品名"><span className="product-name">{r.full_product_name}</span>
+                      {r.note && <div className="device-note block">⚠ {r.note}</div>}</td>
                     <td data-label="SN">{r.sn ?? '—'}</td>
                     <td data-label="狀態"><StatusBadge status={r.status} /></td>
                     <td data-label="操作">

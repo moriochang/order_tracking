@@ -296,6 +296,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                       {lines.map((l) => (
                         <div key={l.device.id} className={`unit-card unit-${l.device.status}`}>
                           <div className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</div>
+                          {l.device.note && <div className="device-note block">⚠ {l.device.note}</div>}
                           <div className="row gap wrap">
                             <StatusBadge status={l.device.status} />
                             {stepsOf(l.device).map((step) => (
@@ -312,7 +313,8 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 </td>
                 <td data-label="商品明細" className="desk-only">
                   {cell((l) => (
-                    <span className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</span>
+                    <span className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}
+                      {l.device.note && <span className="device-note">⚠ {l.device.note}</span>}</span>
                   ))}
                 </td>
                 <td data-label="數量" className="desk-only">{cell(() => 1)}</td>
