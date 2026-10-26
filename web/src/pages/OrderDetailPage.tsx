@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useMe } from '../auth/AuthProvider';
 import { Link, useParams } from 'react-router-dom';
 import { listProfiles, loadOrder, rpc } from '../lib/api';
 import { fmtDate, fmtDateTime } from '../lib/format';
@@ -20,7 +19,7 @@ type Modal =
   | { kind: 'cancel_device'; device: Device; item: OrderItem }
   | { kind: 'arrival' | 'notify' | 'deliver' | 'note' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
 
-// 管理者更正狀態：只能退回一格
+// 更正狀態：只能退回一格（原因必填）
 const CORRECT_TO: Partial<Record<Device['status'], Device['status']>> = {
   delivered: 'notified_pending_pickup',
   notified_pending_pickup: 'arrived_pending_notify',
@@ -35,7 +34,6 @@ export function OrderDetailPage() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [deviceFilter, setDeviceFilter] = useState<string | null>(null);
   const [opError, setOpError] = useState<unknown>(null);
-  const me = useMe();
   const names = useMemo(() => new Map((profiles.data ?? []).map((p) => [p.user_id, p.display_name])), [profiles.data]);
 
   if (data.loading && !data.data) return <div className="muted">載入中…</div>;
@@ -54,7 +52,6 @@ export function OrderDetailPage() {
   const units = [...d.devices].sort((a, b) => unitNo.get(a.id)! - unitNo.get(b.id)!);
   const unitName = (dev: Device) => `${unitNo.get(dev.id)}. ${itemById.get(dev.order_item_id)!.full_product_name}${dev.sn ? `（${dev.sn}）` : ''}`;
   const unitsOfItem = (itemId: string) => d.devices.filter((x) => x.order_item_id === itemId && x.status !== 'cancelled').length;
-  const isManager = me.role === 'manager' || me.role === 'admin';
 
   async function toggleLabeled(dev: Device) {
     setOpError(null);
@@ -211,7 +208,7 @@ export function OrderDetailPage() {
                           {active && dev.status !== 'cancelled' && (
                             <button className="link" onClick={() => setModal({ kind: 'note', device: dev, item: it })}>備註</button>
                           )}
-                          {active && isManager && CORRECT_TO[dev.status] && (
+                          {active && CORRECT_TO[dev.status] && (
                             <button className="link" onClick={() => setModal({ kind: 'correct_status', device: dev, item: it })}>更正狀態</button>
                           )}
                           {active && !['delivered', 'cancelled'].includes(dev.status) && (

@@ -71,7 +71,7 @@ test('T103 批次通知多台；跨門市不可操作；單機備註', async (t)
   assert.equal((await devs())[0].note, '顧客要求週末取貨');
 });
 
-test('T104 更正 SN 需原因；管理者更正狀態退回一格（同仁不可）', async (t) => {
+test('T104 更正 SN 需原因；同仁可更正狀態退回一格（需原因、限自己門市）', async (t) => {
   const { db, devs } = await setup(1); t.after(() => db.close());
   let [d] = await devs();
   await call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, 'WRONG']);
@@ -83,8 +83,9 @@ test('T104 更正 SN 需原因；管理者更正狀態退回一格（同仁不�
   [d] = await devs();
   assert.equal(d.sn, 'CW93FPXM56');
 
-  assert.equal(await expectError(call(db, 'staffA', 'correct_device_status($1, $2, $3)', [d.id, d.version, '登記錯台'])), 'FORBIDDEN');
-  await call(db, 'managerA', 'correct_device_status($1, $2, $3)', [d.id, d.version, '登記錯台']);
+  assert.equal(await expectError(call(db, 'staffA', 'correct_device_status($1, $2, $3)', [d.id, d.version, ' '])), 'REASON_REQUIRED');
+  assert.equal(await expectError(call(db, 'staffB', 'correct_device_status($1, $2, $3)', [d.id, d.version, '登記錯台'])), 'NOT_FOUND');
+  await call(db, 'staffA', 'correct_device_status($1, $2, $3)', [d.id, d.version, '登記錯台']);
   [d] = await devs();
   assert.deepEqual([d.status, d.sn, d.is_labeled], ['pending_arrival', null, false]);
   // SN 釋出後可以登記在其他機器
