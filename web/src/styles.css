@@ -257,3 +257,10 @@ tr.overdue td { background: #fdecea; }
 .tile-notified_pending_pickup { --tile-color: #1f5fbf; }
 .tile-delivered { --tile-color: #1b7f3b; }
 a.tile-link:hover { border-color: var(--tile-color); filter: brightness(1.08); box-shadow: 0 2px 6px rgba(16, 24, 40, 0.18); }
+/* 待辦清單分頁：與首頁方塊同色；目前分頁整塊填色，其他為同色外框 */
+button.todo-tab { background: var(--surface); color: var(--tab-color); border-color: var(--tab-color); font-weight: 600; }
+button.todo-tab.active { background: var(--tab-color); color: #fff; }
+button.todo-tab-arrival { --tab-color: #475467; }
+button.todo-tab-notify { --tab-color: #dc6803; }
+button.todo-tab-label { --tab-color: #7a5af8; }
+button.todo-tab-pickup { --tab-color: #1f5fbf; }

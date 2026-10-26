@@ -82,7 +82,7 @@ export function TodoPage() {
       <h1>待辦清單</h1>
       <div className="row gap wrap">
         {TABS.map((t) => (
-          <button key={t.key} type="button" className={tab === t.key ? '' : 'secondary'} onClick={() => setParam('tab', t.key === 'arrival' ? '' : t.key)}>
+          <button key={t.key} type="button" className={`todo-tab todo-tab-${t.key} ${tab === t.key ? 'active' : ''}`} onClick={() => setParam('tab', t.key === 'arrival' ? '' : t.key)}>
             {t.label}（{all.filter((r) => inTab(r, t.key)).length}）
           </button>
         ))}
