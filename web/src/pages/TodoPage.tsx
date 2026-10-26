@@ -10,8 +10,9 @@ import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 const PICKUP_OVERDUE_DAYS = 14;   // 通知後超過幾天未取貨標紅
 
-type TabKey = 'arrival' | 'notify' | 'label' | 'pickup';
+type TabKey = 'all' | 'arrival' | 'notify' | 'label' | 'pickup';
 const TABS: { key: TabKey; label: string; hint: string }[] = [
+  { key: 'all', label: '全部', hint: '所有尚未完成的機器，依結帳日期由舊到新。' },
   { key: 'arrival', label: '待到貨', hint: '依結帳日期由舊到新，先訂的先給。' },
   { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。' },
   { key: 'label', label: '待貼', hint: '已到貨、尚未貼標留貨的機器。' },
@@ -19,14 +20,15 @@ const TABS: { key: TabKey; label: string; hint: string }[] = [
 ];
 
 const inTab = (r: TodoRow, tab: TabKey) => (
-  tab === 'arrival' ? r.status === 'pending_arrival'
+  tab === 'all' ? true
+  : tab === 'arrival' ? r.status === 'pending_arrival'
     : tab === 'notify' ? r.status === 'arrived_pending_notify'
       : tab === 'label' ? r.status !== 'pending_arrival' && !r.is_labeled
         : r.status === 'notified_pending_pickup');
 
 // 依各分頁的等待起點排序，最久的在前
 const since = (r: TodoRow, tab: TabKey) => (
-  tab === 'arrival' ? r.purchase_date
+  tab === 'arrival' || tab === 'all' ? r.purchase_date
     : tab === 'pickup' ? (r.last_notified_at ?? r.arrived_at ?? '')
       : (r.arrived_at ?? ''));
 
@@ -48,7 +50,7 @@ const toDevice = (r: TodoRow) => ({
 export function TodoPage() {
   const me = useMe();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') ?? 'arrival') as TabKey;
+  const tab = (params.get('tab') ?? 'all') as TabKey;
   const store = params.get('store') ?? '';
   const q = params.get('q') ?? '';
   const [input, setInput] = useState(q);
@@ -82,7 +84,7 @@ export function TodoPage() {
       <h1>待辦清單</h1>
       <div className="row gap wrap">
         {TABS.map((t) => (
-          <button key={t.key} type="button" className={`todo-tab todo-tab-${t.key} ${tab === t.key ? 'active' : ''}`} onClick={() => setParam('tab', t.key === 'arrival' ? '' : t.key)}>
+          <button key={t.key} type="button" className={`todo-tab todo-tab-${t.key} ${tab === t.key ? 'active' : ''}`} onClick={() => setParam('tab', t.key === 'all' ? '' : t.key)}>
             {t.label}（{all.filter((r) => inTab(r, t.key)).length}）
           </button>
         ))}
@@ -108,7 +110,7 @@ export function TodoPage() {
           <table className="list">
             <thead>
               <tr>
-                <th>{tab === 'arrival' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'}</th><th>已等</th>
+                <th>{tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'}</th><th>已等</th>
                 <th>訂單編號</th><th>顧客</th><th>電話</th><th>品名</th><th>SN</th><th>狀態</th><th>操作</th>
               </tr>
             </thead>
@@ -119,7 +121,7 @@ export function TodoPage() {
                 const overdue = tab === 'pickup' && days > PICKUP_OVERDUE_DAYS;
                 return (
                   <tr key={r.device_id} className={overdue ? 'overdue' : ''}>
-                    <td data-label={tab === 'arrival' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'} className="nowrap">
+                    <td data-label={tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'} className="nowrap">
                       {start ? fmtDate(taipeiDay(start)) : '—'}
                     </td>
                     <td data-label="已等" className="nowrap"><span className={overdue ? 'overdue-days' : ''}>{days} 天</span></td>
@@ -131,12 +133,18 @@ export function TodoPage() {
                     <td data-label="狀態"><StatusBadge status={r.status} /></td>
                     <td data-label="操作">
                       <div className="row gap">
-                        {tab === 'arrival' && <button type="button" className="step step-arrival" onClick={() => setAction({ kind: 'arrival', row: r })}>登記到貨</button>}
-                        {tab === 'label' && <button type="button" className="step step-label" onClick={() => markLabeled(r)}>已貼</button>}
-                        {(tab === 'notify' || tab === 'pickup') && (
-                          <button type="button" className="step step-notify" onClick={() => setAction({ kind: 'notify', row: r })}>{tab === 'pickup' ? '再次通知' : '通知顧客'}</button>
+                        {(tab === 'arrival' || (tab === 'all' && r.status === 'pending_arrival')) && (
+                          <button type="button" className="step step-arrival" onClick={() => setAction({ kind: 'arrival', row: r })}>登記到貨</button>
                         )}
-                        {tab === 'pickup' && <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成交付</button>}
+                        {(tab === 'label' || (tab === 'all' && r.status !== 'pending_arrival' && !r.is_labeled)) && (
+                          <button type="button" className="step step-label" onClick={() => markLabeled(r)}>已貼</button>
+                        )}
+                        {(tab === 'notify' || tab === 'pickup' || (tab === 'all' && r.status === 'arrived_pending_notify')) && (
+                          <button type="button" className="step step-notify" onClick={() => setAction({ kind: 'notify', row: r })}>{r.status === 'notified_pending_pickup' ? '再次通知' : '通知顧客'}</button>
+                        )}
+                        {(tab === 'pickup' || (tab === 'all' && r.status === 'notified_pending_pickup')) && (
+                          <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成交付</button>
+                        )}
                       </div>
                     </td>
                   </tr>

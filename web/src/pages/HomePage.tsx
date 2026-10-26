@@ -41,7 +41,7 @@ export function HomePage() {
             </>
           );
           return t.tab
-            ? <Link key={t.key} to={`/todo${t.tab === 'arrival' ? '' : `?tab=${t.tab}`}`} className={`tile tile-link tile-${t.key}`}>{body}</Link>
+            ? <Link key={t.key} to={`/todo?tab=${t.tab}`} className={`tile tile-link tile-${t.key}`}>{body}</Link>
             : <div key={t.key} className={`tile stat tile-${t.key}`}>{body}</div>;
         })}
       </section>
