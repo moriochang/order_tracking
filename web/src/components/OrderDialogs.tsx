@@ -169,6 +169,29 @@ export function EditItemDialog({ item, onClose, onSaved }: { item: OrderItem; on
   );
 }
 
+// 合併相同商品：來源項目的待到貨機器併入目標項目，來源整項取消
+export function MergeItemDialog({ source, target, onClose, onSaved }: {
+  source: OrderItem; target: OrderItem; onClose: () => void; onSaved: () => void;
+}) {
+  const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
+  return (
+    <Dialog title="合併相同商品" onClose={onClose}>
+      <div className="stack">
+        <p className="product-name">{source.full_product_name}</p>
+        <p>第 {source.line_no} 項（{source.ordered_qty} 台）併入第 {target.line_no} 項：{target.ordered_qty} 台 → {target.ordered_qty + source.ordered_qty} 台。</p>
+        <p className="small muted">第 {source.line_no} 項會標示為「已取消：合併到第 {target.line_no} 項」，紀錄會保留。</p>
+        <ErrorBanner error={error} />
+        <div className="row gap end">
+          <button className="secondary" onClick={onClose}>取消</button>
+          <button disabled={busy} onClick={() => run(() => rpc('merge_order_items', { p_source_item_id: source.id, p_target_item_id: target.id }))}>
+            {busy ? '合併中…' : '確認合併'}
+          </button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 export function ChangeQtyDialog({ item, devices, onClose, onSaved }: {
   item: OrderItem; devices: Device[]; onClose: () => void; onSaved: () => void;
 }) {

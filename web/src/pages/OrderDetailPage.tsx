@@ -7,7 +7,8 @@ import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL } from '.
 import type { Device, OrderItem } from '../lib/types';
 import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
 import { AuditTimeline } from '../components/AuditTimeline';
-import { AddItemDialog, ChangeQtyDialog, EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
+import { AddItemDialog, ChangeQtyDialog, EditItemDialog, EditOrderDialog, MergeItemDialog } from '../components/OrderDialogs';
+import { sameProduct } from '../components/ItemEditor';
 import { OrderProgress } from './OrdersPage';
 import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, DeviceNoteDialog, NotifyDialog } from '../components/DeviceDialogs';
 
@@ -18,6 +19,7 @@ type Modal =
   | { kind: 'edit_item'; item: OrderItem }
   | { kind: 'qty'; item: OrderItem }
   | { kind: 'cancel_item'; item: OrderItem }
+  | { kind: 'merge'; item: OrderItem; target: OrderItem }
   | { kind: 'cancel_device'; device: Device; item: OrderItem }
   | { kind: 'arrival' | 'notify' | 'deliver' | 'note' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
 
@@ -53,6 +55,11 @@ export function OrderDetailPage() {
   const lastSuccess = (deviceId: string) => d.notifications.find((n) => n.device_id === deviceId && n.is_success);
   const unitName = (dev: Device) => { const it = itemById.get(dev.order_item_id)!; return `${it.line_no}-${dev.unit_no} ${it.full_product_name}${dev.sn ? `（${dev.sn}）` : ''}`; };
   const isManager = me.role === 'manager' || me.role === 'admin';
+  // 前面已有相同商品、且這項的機器都還待到貨時，可以合併過去
+  const mergeTargetOf = (it: OrderItem) => (it.cancelled_at
+    || d.devices.some((x) => x.order_item_id === it.id && !['pending_arrival', 'cancelled'].includes(x.status))
+    ? undefined
+    : d.items.find((t) => t.line_no < it.line_no && !t.cancelled_at && sameProduct(t, it)));
 
   async function toggleLabeled(dev: Device) {
     setOpError(null);
@@ -123,6 +130,9 @@ export function OrderDetailPage() {
               <div className="row gap wrap">
                 <button className="link" onClick={() => setModal({ kind: 'edit_item', item: it })}>修改</button>
                 <button className="link" onClick={() => setModal({ kind: 'qty', item: it })}>修改數量</button>
+                {mergeTargetOf(it) && (
+                  <button className="link" onClick={() => setModal({ kind: 'merge', item: it, target: mergeTargetOf(it)! })}>合併到第 {mergeTargetOf(it)!.line_no} 項</button>
+                )}
                 <button className="link danger-text" onClick={() => setModal({ kind: 'cancel_item', item: it })}>取消</button>
               </div>
             )}
@@ -263,6 +273,7 @@ export function OrderDetailPage() {
       )}
       {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} items={d.items} onClose={close} onSaved={reload} />}
       {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} onClose={close} onSaved={reload} />}
+      {modal?.kind === 'merge' && <MergeItemDialog source={modal.item} target={modal.target} onClose={close} onSaved={reload} />}
       {modal?.kind === 'qty' && <ChangeQtyDialog item={modal.item} devices={d.devices} onClose={close} onSaved={reload} />}
       {modal?.kind === 'cancel_order' && (
         <ReasonDialog title="取消整張訂單" danger confirmLabel="確認取消訂單" onClose={close}
