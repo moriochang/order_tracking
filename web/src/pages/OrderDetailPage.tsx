@@ -6,7 +6,7 @@ import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL } from '.
 import type { Device, OrderItem } from '../lib/types';
 import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
 import { AuditTimeline } from '../components/AuditTimeline';
-import { AddItemDialog, EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
+import { EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
 import { unitNumbers } from '../lib/units';
 import { OrderProgress } from './OrdersPage';
 import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, DeviceNoteDialog, NotifyDialog } from '../components/DeviceDialogs';
@@ -14,7 +14,6 @@ import { ArrivalDialog, CorrectSnDialog, DeliveryDialog, DeviceNoteDialog, Notif
 type Modal =
   | { kind: 'edit_order' }
   | { kind: 'cancel_order' }
-  | { kind: 'add_item' }
   | { kind: 'edit_item'; item: OrderItem }
   | { kind: 'cancel_device'; device: Device; item: OrderItem }
   | { kind: 'arrival' | 'notify' | 'deliver' | 'note' | 'sn' | 'correct_status'; device: Device; item: OrderItem };
@@ -104,7 +103,6 @@ export function OrderDetailPage() {
       <section className="card stack">
         <div className="row between">
           <h2>商品明細</h2>
-          {active && <button className="secondary" onClick={() => setModal({ kind: 'add_item' })}>＋ 新增商品</button>}
         </div>
         {units.filter((dev) => dev.status !== 'cancelled').map((dev) => {
           const it = itemById.get(dev.order_item_id)!;
@@ -268,7 +266,6 @@ export function OrderDetailPage() {
             {modal.device.status === 'arrived_pending_notify' && '（會清除 SN 與已貼）'}</p>}
           onConfirm={async (reason) => { await rpc('correct_device_status', { p_device_id: modal.device.id, p_expected_version: modal.device.version, p_reason: reason }); reload(); }} />
       )}
-      {modal?.kind === 'add_item' && <AddItemDialog orderId={o.id} items={d.items} onClose={close} onSaved={reload} />}
       {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} unitCount={unitsOfItem(modal.item.id)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'cancel_order' && (
         <ReasonDialog title="取消整張訂單" danger confirmLabel="確認取消訂單" onClose={close}

@@ -131,6 +131,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   DUPLICATE: '資料重複，例如預結號碼開頭已被其他門市使用。',
   SN_REQUIRED: '請輸入 SN。',
   LABEL_NOT_ALLOWED: '只有已到貨、尚未交付的機器可以標記已貼。',
+  ADD_ITEM_NOT_ALLOWED: '訂單建立後不能再新增商品或增加數量，請另開新訂單。',
   NETWORK: '網路或伺服器錯誤，操作可能未完成，請重新載入確認。',
 };
 

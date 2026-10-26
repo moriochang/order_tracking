@@ -1,7 +1,6 @@
 // 掃描明細（文字）：原始文字與訂單在同一筆交易建立，掃描商品連到草稿
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
 import { freshDb, as, expectError, createOrder } from '../lib/harness.js';
 
 const RAW = '預購明細Pre-Sale\n*75000002*\n銷售日期: 2026/10/01\n機號: 011 收銀員: A00001 序號: 102';
@@ -56,8 +55,6 @@ test('T62 前端傳入的 import_draft_id 會被忽略', async (t) => {
   const second = await createOrder(db, 'staffA', {
     items: [{ full_product_name: 'B', ordered_qty: 1, import_draft_id: draftId }],
   });
-  await as(db, 'staffA', 'select add_order_item($1, $2)', [second.order_id,
-    { client_request_id: randomUUID(), full_product_name: 'C', ordered_qty: 1, source: 'ocr', import_draft_id: draftId }]);
   const rows = await as(db, 'staffA', 'select source, import_draft_id from order_items where order_id = $1 order by line_no', [second.order_id]);
-  assert.deepEqual(rows, [{ source: 'manual', import_draft_id: null }, { source: 'manual', import_draft_id: null }]);
+  assert.deepEqual(rows, [{ source: 'manual', import_draft_id: null }]);
 });

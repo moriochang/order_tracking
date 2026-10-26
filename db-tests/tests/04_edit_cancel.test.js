@@ -25,17 +25,14 @@ test('T31 修改訂單不可變更門市、訂單編號等欄位', async (t) => 
   assert.equal(await expectError(asDbAdmin(db, `update orders set store_code = 'B02' where id = $1`, [order_id])), 'IMMUTABLE_FIELD');
 });
 
-test('T32 新增商品到既有訂單；重送不重複建立', async (t) => {
+test('T32 訂單建立後不能新增商品', async (t) => {
   const db = await freshDb(); t.after(() => db.close());
   const { order_id } = await createOrder(db, 'staffA');
   const item = { client_request_id: randomUUID(), full_product_name: '示範平板 補訂', ordered_qty: 2 };
-  const [r1] = await as(db, 'staffA', 'select add_order_item($1, $2) as r', [order_id, item]);
-  const [r2] = await as(db, 'staffA', 'select add_order_item($1, $2) as r', [order_id, item]);
-  assert.equal(r1.r.item_id, r2.r.item_id);
-  assert.deepEqual((await devicesOf(db, order_id)).map((d) => [d.line_no, d.unit_no]), [[1, 1], [2, 1], [2, 2]]);
+  assert.match(await expectError(as(db, 'staffA', 'select add_order_item($1, $2)', [order_id, item])), /permission denied/);
 });
 
-test('T25 數量 3 → 2：指定的單機變為已取消（不刪除），數量與單機數一致', async (t) => {
+test('T25 數量 3 → 2：指定的單機變為已取消（不刪除），數量與單機數一致；不能增加', async (t) => {
   const db = await freshDb(); t.after(() => db.close());
   const { order_id } = await createOrder(db, 'staffA', { items: [{ full_product_name: 'A', ordered_qty: 3 }] });
   const devs = await devicesOf(db, order_id);
@@ -52,16 +49,13 @@ test('T25 數量 3 → 2：指定的單機變為已取消（不刪除），數�
   const [item] = await as(db, 'staffA', 'select ordered_qty from order_items where id = $1', [itemId]);
   assert.equal(item.ordered_qty, 2);
 
-  // 再增加到 4：補建 unit_no 4、5
-  await as(db, 'staffA', `select change_item_quantity($1, 2, 4, '{}'::uuid[], '顧客加訂')`, [itemId]);
-  assert.deepEqual((await devicesOf(db, order_id)).map((d) => [d.unit_no, d.status]),
-    [[1, 'pending_arrival'], [2, 'cancelled'], [3, 'pending_arrival'], [4, 'pending_arrival'], [5, 'pending_arrival']]);
+  // 不能增加數量（訂單建立後依單據固定）
+  assert.equal(await expectError(as(db, 'staffA', `select change_item_quantity($1, 2, 4, '{}'::uuid[], '顧客加訂')`, [itemId])), 'ADD_ITEM_NOT_ALLOWED');
 
   const logs = await as(db, 'staffA',
     `select entity_type, operation, reason from audit_logs where order_id = $1 and action = 'change_item_quantity' order by id`, [order_id]);
   assert.deepEqual(logs.map((l) => [l.entity_type, l.operation, l.reason]), [
     ['device', 'UPDATE', '顧客少訂一台'], ['order_item', 'UPDATE', '顧客少訂一台'],
-    ['device', 'INSERT', '顧客加訂'], ['device', 'INSERT', '顧客加訂'], ['order_item', 'UPDATE', '顧客加訂'],
   ]);
 });
 
