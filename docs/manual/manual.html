@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<title>預購商品追蹤｜網頁操作教學</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+  :root {
+    --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7; --bg: #f5f5f7; --blue: #0071e3;
+    --c-arrival: #636366; --c-notify: #c93400; --c-label: #8944ab; --c-pickup: #0071e3; --c-deliver: #248a3d;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif; color: var(--text); font-size: 10.5pt; line-height: 1.7; margin: 0; }
+  h1 { font-size: 28pt; letter-spacing: -0.02em; margin: 0 0 6px; }
+  h2 { font-size: 17pt; letter-spacing: -0.01em; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--text); break-after: avoid; }
+  h3 { font-size: 12.5pt; margin: 18px 0 6px; break-after: avoid; }
+  p { margin: 4px 0 8px; }
+  section { break-before: page; }
+  section.first { break-before: auto; }
+  ol, ul { margin: 4px 0 10px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.8pt; break-inside: avoid; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+
+  /* 封面 */
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+  .app-icon { width: 64px; height: 64px; border-radius: 15px; background: var(--blue); display: grid; place-items: center; margin-bottom: 22px; }
+  .cover .subtitle { font-size: 15pt; color: var(--muted); margin-bottom: 30px; }
+  .cover .meta { font-size: 10pt; color: var(--muted); line-height: 2; }
+  .toc { margin-top: 26px; columns: 2; column-gap: 28px; font-size: 10.5pt; }
+  .toc div { break-inside: avoid; padding: 3px 0; border-bottom: 1px dotted var(--line); }
+
+  /* 介面元素示意 */
+  .btn { display: inline-block; padding: 1px 10px; border-radius: 999px; font-size: 9pt; font-weight: 500; color: #fff; white-space: nowrap; line-height: 1.6; vertical-align: 1px; }
+  .btn.outline { background: #fff; color: var(--blue); border: 1px solid var(--blue); }
+  .btn.blue { background: var(--blue); }
+  .b-arrival { background: var(--c-arrival); } .b-notify { background: var(--c-notify); } .b-label { background: var(--c-label); }
+  .b-pickup { background: var(--c-pickup); } .b-deliver { background: var(--c-deliver); }
+  .badge { display: inline-block; padding: 0 8px; border-radius: 999px; font-size: 8.8pt; white-space: nowrap; line-height: 1.7; vertical-align: 1px; }
+  .s-pending { background: #eef0f3; color: #475467; } .s-arrived { background: #fff1d6; color: #93370d; }
+  .s-notified { background: #e0ecff; color: #1f4fa0; } .s-delivered { background: #dcf5e6; color: #146c3a; }
+  .warn { color: var(--c-notify); font-weight: 600; }
+  .ui { font-weight: 600; }
+
+  .tip, .note, .caution { border-radius: 12px; padding: 9px 13px; margin: 10px 0; break-inside: avoid; font-size: 9.8pt; }
+  .tip { background: #eef4ff; } .tip::before { content: "小提醒　"; font-weight: 700; color: var(--blue); }
+  .note { background: var(--bg); }
+  .caution { background: #fff3e6; } .caution::before { content: "注意　"; font-weight: 700; color: var(--c-notify); }
+
+  .flow { display: flex; align-items: stretch; gap: 6px; margin: 10px 0 14px; break-inside: avoid; }
+  .flow .step { flex: 1; border-radius: 12px; padding: 9px 8px; color: #fff; text-align: center; font-size: 9.5pt; line-height: 1.45; }
+  .flow .step b { display: block; font-size: 10.5pt; margin-bottom: 2px; }
+  .flow .arrow { align-self: center; color: var(--muted); font-size: 13pt; }
+
+  .tiles { display: flex; gap: 6px; margin: 8px 0 12px; break-inside: avoid; }
+  .tiles div { flex: 1; border-radius: 12px; color: #fff; padding: 8px 10px; font-size: 9pt; }
+  .tiles b { display: block; font-size: 16pt; line-height: 1.2; }
+
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 10px 0; break-inside: avoid; }
+  .card .title { font-weight: 700; margin-bottom: 4px; }
+  .num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--text); color: #fff; font-size: 9pt; font-weight: 700; margin-right: 6px; }
+  .footer-note { margin-top: 24px; font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- 封面 -->
+<section class="first cover">
+  <div class="app-icon">
+    <svg viewBox="0 0 64 64" width="44" height="44" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 22L32 12 14 22v20l18 10 18-10V22z"/><path d="M14 22l18 10 18-10"/><path d="M32 32v20"/><path d="M23 17l18 10"/>
+    </svg>
+  </div>
+  <h1>預購商品追蹤</h1>
+  <div class="subtitle">網頁操作教學</div>
+  <div class="meta">
+    網址：https://moriochang.github.io/order_tracking/<br>
+    適用對象：門市同仁、門市主管、總部管理者<br>
+    版本：2026 年 10 月
+  </div>
+  <div class="toc">
+    <div>1. 登入與加入主畫面</div>
+    <div>2. 首頁</div>
+    <div>3. 新增訂單（手動輸入）</div>
+    <div>4. 新增訂單（拍照辨識）</div>
+    <div>5. 到貨後的處理流程</div>
+    <div>6. 訂單詳細頁</div>
+    <div>7. 待辦清單</div>
+    <div>8. 訂單查詢與匯出</div>
+    <div>9. 備註怎麼填</div>
+    <div>10. 角色與權限</div>
+    <div>11. 管理者：設定</div>
+    <div>12. 常見問題</div>
+  </div>
+</section>
+
+<!-- 1 登入 -->
+<section>
+  <h2>1. 登入與加入主畫面</h2>
+  <h3>登入</h3>
+  <ol>
+    <li>打開網址 <b>https://moriochang.github.io/order_tracking/</b>。</li>
+    <li>按 <span class="btn blue">使用 Google 帳號繼續</span>。</li>
+    <li>選擇自己的公司帳號（<b>@istore.com.tw</b>）。</li>
+  </ol>
+  <div class="note">帳號由總部管理者開通。若畫面顯示「帳號尚未開通」，請聯絡管理者；若顯示「不是公司帳號」，請登出後改用 @istore.com.tw 帳號登入。</div>
+
+  <h3>加入 iPhone 主畫面（建議）</h3>
+  <ol>
+    <li>用 <b>Safari</b> 打開網址並登入。</li>
+    <li>按下方的「分享」按鈕 →「<b>加入主畫面</b>」。</li>
+    <li>主畫面會出現藍色包裹圖示，之後點它就能像 App 一樣直接開啟。</li>
+  </ol>
+
+  <h3>畫面上方的選單</h3>
+  <table>
+    <tr><th style="width:24%">選單</th><th>用途</th></tr>
+    <tr><td>首頁</td><td>看各狀態的待辦數量、最近建立的訂單，可直接在列表上操作</td></tr>
+    <tr><td>新增訂單</td><td>建立新的預購訂單（手動輸入或拍照辨識）</td></tr>
+    <tr><td>訂單查詢</td><td>依時間、狀態、姓名、電話、型號、SN 等條件找訂單；查某型號的欠貨</td></tr>
+    <tr><td>待辦清單</td><td>依「下一步該做什麼」列出每一台機器，最久的排最前面</td></tr>
+    <tr><td>設定</td><td>只有總部管理者看得到：門市、帳號、產品資料、紀錄</td></tr>
+  </table>
+
+  <h3>狀態與顏色</h3>
+  <p>系統以「每一台機器」為單位追蹤，每台機器會依序經過以下狀態。按鈕、標籤、首頁方塊都使用同一套顏色。</p>
+  <div class="flow">
+    <div class="step" style="background:var(--c-arrival)"><b>待到貨</b>等貨中</div><div class="arrow">→</div>
+    <div class="step" style="background:var(--c-notify)"><b>已到貨待通知</b>登記到貨、SN</div><div class="arrow">→</div>
+    <div class="step" style="background:var(--c-pickup)"><b>已通知待取貨</b>已聯絡顧客</div><div class="arrow">→</div>
+    <div class="step" style="background:var(--c-deliver)"><b>已交付</b>顧客已取貨</div>
+  </div>
+  <p>「<b>已貼</b>」（紫色）是另外的標記：機器到貨後，在實機上貼標留貨，就把它勾起來。</p>
+</section>
+
+<!-- 2 首頁 -->
+<section>
+  <h2>2. 首頁</h2>
+  <h3>上方數字方塊</h3>
+  <div class="tiles">
+    <div style="background:var(--c-arrival)"><b>10</b>待到貨</div>
+    <div style="background:var(--c-notify)"><b>4</b>待通知</div>
+    <div style="background:var(--c-label)"><b>1</b>待貼</div>
+    <div style="background:var(--c-pickup)"><b>1</b>待取貨</div>
+    <div style="background:var(--c-deliver)"><b>1</b>已交付（統計）</div>
+  </div>
+  <p>數字是「幾台機器」，即時計算。<b>點方塊會直接進入待辦清單的對應分頁</b>。</p>
+
+  <h3>最近建立的訂單</h3>
+  <p>列出最近 10 張訂單，<b>每一台機器各佔一行</b>，右邊的「操作」欄只顯示這一台目前能做的下一步：</p>
+  <table>
+    <tr><th style="width:26%">按鈕</th><th>出現時機</th><th>按下後</th></tr>
+    <tr><td><span class="btn b-arrival">登記到貨</span></td><td>待到貨</td><td>開啟登記視窗，輸入或拍照辨識 SN</td></tr>
+    <tr><td><span class="btn b-label">已貼</span></td><td>已到貨、還沒貼標</td><td>直接標記已貼</td></tr>
+    <tr><td><span class="btn b-notify">通知顧客</span></td><td>已到貨待通知</td><td>記錄通知方式與結果</td></tr>
+    <tr><td><span class="btn b-deliver">完成交付</span></td><td>已通知待取貨</td><td>確認交付，可填交付備註</td></tr>
+  </table>
+  <p>品名旁的 <span class="warn">⚠ AC+</span> 這類橘色文字是備註提醒（見第 9 章）。手機上每台機器會顯示成一張小卡片，左側色條代表狀態。</p>
+</section>
+
+<!-- 3 新增訂單 手動 -->
+<section>
+  <h2>3. 新增訂單（手動輸入）</h2>
+  <p>點上方選單「<b>新增訂單</b>」。</p>
+
+  <h3>A. 顧客與單據資料</h3>
+  <table>
+    <tr><th style="width:26%">欄位</th><th>說明</th></tr>
+    <tr><td>顧客姓名、聯絡電話</td><td>必填。單據上沒有，請手動輸入</td></tr>
+    <tr><td>結帳／預購日期</td><td>必填，不能是未來日期</td></tr>
+    <tr><td>門市</td><td>預設 75 中港</td></tr>
+    <tr><td>收銀機號、序號</td><td>必填。<b>序號是收據上的流水號，不是機器 SN</b></td></tr>
+    <tr><td>預結號碼</td><td>單據上方條碼下的數字（例：75022765），選填</td></tr>
+    <tr><td>訂單備註</td><td>跟整張單、顧客有關的事；<b>需要寄送請寫在這裡</b>（收件人、電話、地址）</td></tr>
+  </table>
+  <div class="tip">訂單編號會自動產生為「店號-收銀機號-序號」，例如 <b>75-011-00348</b>。</div>
+
+  <h3>B. 商品明細</h3>
+  <ol>
+    <li>按 <span class="btn blue">＋ 手動新增</span>。</li>
+    <li>先輸入<b>型號</b>（例：MFYN4），停一下，系統會依產品資料自動帶入完整品名。
+      <ul>
+        <li>同一型號有多個品名時（例如有「專」開頭的），會列出選項，請依單據點選。</li>
+        <li>產品資料沒有這個型號時，請手動輸入完整品名。</li>
+      </ul></li>
+    <li>國際條碼選填；輸入後系統會檢查碼數與檢查碼，打錯一碼通常會被擋下。</li>
+    <li>填寫數量，有需要的話填<b>商品備註</b>（例：AC+、保貼）。</li>
+    <li>按「加入／更新商品」。</li>
+  </ol>
+  <div class="note">同一個商品分兩次加入，系統會自動合併成同一項並增加數量。</div>
+
+  <h3>C. 建立</h3>
+  <ol>
+    <li>確認右側「摘要」：預結號碼、機號、序號、商品明細與備註。</li>
+    <li>按 <span class="btn blue">建立訂單</span>。系統會檢查是否有重複單據：
+      <ul>
+        <li>同店已有相同<b>預結號碼</b>的訂單：不能建立。</li>
+        <li>同機號、同序號、同日期：疑似重複，確認不是重複後需填寫原因才能繼續。</li>
+      </ul></li>
+    <li>在確認視窗再核對一次，按 <span class="btn blue">確認建立</span>。</li>
+  </ol>
+  <div class="caution">訂單建立後<b>不能再新增商品或增加數量</b>。顧客要加買，請另開一張新訂單。</div>
+</section>
+
+<!-- 4 拍照辨識 -->
+<section>
+  <h2>4. 新增訂單（拍照辨識）</h2>
+  <ol>
+    <li>在新增訂單頁的「B. 商品明細」按 <span class="btn outline">掃描明細</span>。</li>
+    <li>按 <span class="btn blue">拍照辨識</span>，拍下預購明細單據，或從相簿選照片。
+      <span class="muted">（單據放平擺正、光線充足。）</span></li>
+    <li>等幾秒，系統會辨識並顯示預覽：預結號碼、銷售日期、機號、序號與商品。</li>
+    <li>核對預覽內容，按 <span class="btn blue">帶入表單</span>。</li>
+    <li>補上顧客姓名、電話，逐項核對後建立訂單（同第 3 章）。</li>
+  </ol>
+
+  <h3>預覽裡的符號</h3>
+  <table>
+    <tr><th style="width:26%">顯示</th><th>意思</th></tr>
+    <tr><td style="color:var(--c-deliver)">✓ 綠色</td><td>單據上的數字交叉核對一致（數量×單價＝金額、合計、上下方機號序號一致），或品名已依產品資料自動校正</td></tr>
+    <tr><td class="warn">✗／需核對（橘色）</td><td>數字對不上或可能辨識錯誤，<b>請對照單據修正</b></td></tr>
+    <tr><td class="warn">⚠ 提醒</td><td>例如數量為負的作廢行，已自動排除</td></tr>
+  </table>
+  <div class="caution">只要還有「需核對」的商品，就不能建立訂單。請按該商品的「<b>編輯</b>」，確認內容後按「加入／更新商品」。</div>
+  <div class="note">
+    同一商品在單據上分成多行時，會自動合併並加總數量。<br>
+    照片只用來辨識，不會儲存；辨識出的文字會隨訂單保存，可在訂單詳細頁展開「掃描原文」查看。<br>
+    也可以不拍照，直接把單據文字貼到「或貼上單據文字」後按「解析」。
+  </div>
+</section>
+
+<!-- 5 到貨流程 -->
+<section>
+  <h2>5. 到貨後的處理流程</h2>
+  <div class="card">
+    <div class="title"><span class="num">1</span>登記到貨與 SN</div>
+    <p>按 <span class="btn b-arrival">登記到貨</span>，輸入 SN，或按「<b>拍照辨識</b>」拍包裝盒標籤，系統會讀取「(S) Serial No.」後面的值。</p>
+    <ul class="small">
+      <li>SN 一般為 10–12 碼英數字；英文 O、I 會自動改成數字 0、1。</li>
+      <li>配件沒有 SN 可以留空，按「確認到貨（無 SN）」。之後可在 SN 欄按「補登」。</li>
+      <li>同一個 SN 不能登記在兩台機器上。</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="title"><span class="num">2</span>已貼</div>
+    <p>實機貼標留貨後，按 <span class="btn b-label">已貼</span>（或在訂單詳細頁勾選「已貼」）。</p>
+  </div>
+  <div class="card">
+    <div class="title"><span class="num">3</span>通知顧客</div>
+    <p>聯絡顧客後按 <span class="btn b-notify">通知顧客</span>，選擇方式（電話、簡訊、通訊軟體…）與結果。<b>有聯繫就算已通知</b>，狀態會變成「已通知待取貨」。同一張單其他已到貨的機器可以勾選一起記錄。</p>
+  </div>
+  <div class="card">
+    <div class="title"><span class="num">4</span>完成交付</div>
+    <p>顧客取貨時按 <span class="btn b-deliver">完成交付</span>，<b>核對 SN 與實機</b>。視窗上方若有 <span class="warn">⚠ 備註</span>（例如 AC+），請先處理。</p>
+    <ul class="small">
+      <li>交付備註可填：本人取貨、代領人姓名、<b>寄送的黑貓單號</b>。</li>
+      <li>顧客在通知前就到店：在訂單詳細頁按「<b>直接交付</b>」，系統會自動補記一筆「顧客到店」通知。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6 訂單詳細頁 -->
+<section>
+  <h2>6. 訂單詳細頁</h2>
+  <p>在任何列表點<b>訂單編號</b>即可進入。</p>
+  <table>
+    <tr><th style="width:24%">區塊</th><th>可以做的事</th></tr>
+    <tr><td>訂單資料</td><td>「修改」顧客、電話、日期、機號、序號、預結號碼、訂單備註（修改機號或序號，訂單編號會跟著更新）；「取消訂單」需填原因</td></tr>
+    <tr><td>商品明細</td><td>每台一行。「修改」品名、型號、條碼、商品備註（同一批建立的多台會一起修改）；「取消」單台需填原因</td></tr>
+    <tr><td>單機</td><td>每台的 SN、狀態、通知、已貼、到貨、交付時間與下一步按鈕；「備註」填單機備註；「更正」SN；「更正狀態」；「歷史」看這台的所有異動</td></tr>
+    <tr><td>通知紀錄</td><td>每一次通知的時間、操作人、方式與結果</td></tr>
+    <tr><td>異動紀錄</td><td>誰、什麼時候、改了什麼、原因。可依類別篩選</td></tr>
+  </table>
+  <h3>更正狀態（按錯時使用）</h3>
+  <p>按「<b>更正狀態</b>」可以退回一格，例如「已交付 → 已通知待取貨」、「已到貨待通知 → 待到貨」（會清除 SN 與已貼）。必須填寫原因，紀錄會保留。</p>
+  <div class="note">所有修改、取消、更正都會在異動紀錄留下操作人與時間，紀錄不能修改或刪除。操作人名字以綠底白字顯示。</div>
+</section>
+
+<!-- 7 待辦清單 -->
+<section>
+  <h2>7. 待辦清單</h2>
+  <p>把「現在該做什麼」集中在一起，每一台機器一列，<b>等待最久的排最前面</b>，列上直接有操作按鈕。</p>
+  <table>
+    <tr><th style="width:18%">分頁</th><th style="width:36%">列出</th><th>排序</th></tr>
+    <tr><td><b>全部</b></td><td>所有尚未完成的機器</td><td>結帳日期由舊到新</td></tr>
+    <tr><td><span class="btn b-arrival">待到貨</span></td><td>還沒到貨</td><td>結帳日期由舊到新，先訂的先給</td></tr>
+    <tr><td><span class="btn b-notify">待通知</span></td><td>已到貨、尚未聯絡顧客</td><td>到貨時間由舊到新</td></tr>
+    <tr><td><span class="btn b-label">待貼</span></td><td>已到貨、尚未貼標</td><td>到貨時間由舊到新</td></tr>
+    <tr><td><span class="btn b-pickup">待取貨</span></td><td>已通知、顧客尚未取貨</td><td>通知時間由舊到新；<b class="warn">超過 14 天整列標紅</b></td></tr>
+  </table>
+  <div class="tip">貨到了：在篩選欄輸入型號（例：MD3Y4），切到「待到貨」，從最上面依序登記，就是先訂先給的順序。</div>
+</section>
+
+<!-- 8 訂單查詢 -->
+<section>
+  <h2>8. 訂單查詢與匯出</h2>
+  <h3>依訂單</h3>
+  <p>上方篩選列由左到右：</p>
+  <table>
+    <tr><th style="width:22%">選項</th><th>內容</th></tr>
+    <tr><td>時間</td><td>任何時間／今天／近 7 天／近 30 天／本月（依結帳日期）</td></tr>
+    <tr><td>狀態</td><td>全部／進行中／有待到貨／有待通知／有待取貨／已完成／已取消</td></tr>
+    <tr><td>搜尋欄位＋關鍵字</td><td>全部欄位、訂單編號、顧客姓名、電話、預結號碼、序號、型號／品名、SN</td></tr>
+  </table>
+  <p>時間與狀態選了就會套用；關鍵字輸入後按 <span class="btn blue">查詢</span>。最多顯示 100 筆。</p>
+
+  <h3>依型號查欠貨</h3>
+  <p>輸入型號（或部分品名），列出還有欠貨的訂單，依結帳日期由舊到新。同一張單的同一商品合併成一列，顯示訂購、欠貨、已到貨未交付、已交付台數。勾選「顯示全部（含已到貨）」可一併查看已到齊的訂單。</p>
+
+  <h3>匯出（門市主管、總部管理者）</h3>
+  <ol>
+    <li>先用篩選列設定條件。</li>
+    <li>按「<b>匯出 Excel</b>」（建議）或「匯出 CSV」。</li>
+  </ol>
+  <div class="note">Excel 會保留機號、序號、電話開頭的 0 與國際條碼完整數字；CSV 用 Excel 打開時這些欄位可能會變形。每次匯出都會記錄操作人、時間、筆數與查詢條件。</div>
+</section>
+
+<!-- 9 備註 -->
+<section>
+  <h2>9. 備註怎麼填</h2>
+  <table>
+    <tr><th style="width:18%">備註</th><th style="width:30%">在哪裡填</th><th>用途與例子</th></tr>
+    <tr><td><b>訂單備註</b></td><td>新增訂單、修改訂單</td><td>整張單、跟顧客有關的事。例：下午 3 點後聯絡、代領人王小明、<b>寄送地址與收件人</b></td></tr>
+    <tr><td><b>商品備註</b></td><td>新增或修改商品</td><td>建立訂單時就知道、跟這項商品有關的事。例：<b>AC+</b>、保貼</td></tr>
+    <tr><td><b>單機備註</b></td><td>訂單詳細頁每台的「備註」</td><td>建立後才知道、只跟某一台有關的事。例：外盒壓傷、取貨時加購 AC+</td></tr>
+    <tr><td><b>交付備註</b></td><td>完成交付時</td><td>例：本人取貨、代領人姓名、<b>黑貓單號</b></td></tr>
+  </table>
+  <p>商品備註與單機備註會以橘色 <span class="warn">⚠ AC+</span> 顯示在首頁、訂單查詢、待辦清單，並在<b>完成交付視窗</b>醒目提示，交機時不會漏掉。</p>
+  <h3>寄送流程</h3>
+  <ol>
+    <li>建立訂單時，把收件人、電話、地址寫在<b>訂單備註</b>。</li>
+    <li>寄出後，在那台機器按「完成交付」，於<b>交付備註</b>輸入黑貓單號。</li>
+  </ol>
+</section>
+
+<!-- 10 權限 -->
+<section>
+  <h2>10. 角色與權限</h2>
+  <table>
+    <tr><th>功能</th><th style="width:15%">門市同仁</th><th style="width:15%">門市主管</th><th style="width:15%">總部管理者</th></tr>
+    <tr><td>可看的門市</td><td>被指派的門市</td><td>被指派的門市</td><td>全部門市</td></tr>
+    <tr><td>新增、修改、取消訂單（取消需原因）</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td>到貨、SN、已貼、通知、交付、單機備註</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td>更正 SN、更正狀態（需原因）</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td>訂單查詢、依型號查欠貨、待辦清單</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td><b>匯出 Excel／CSV</b></td><td>—</td><td>✓</td><td>✓</td></tr>
+    <tr><td><b>設定</b>（門市、帳號、產品資料、紀錄）</td><td>—</td><td>—</td><td>✓</td></tr>
+  </table>
+</section>
+
+<!-- 11 設定 -->
+<section>
+  <h2>11. 管理者：設定</h2>
+  <h3>門市</h3>
+  <p>「＋ 新增門市」或「修改」門市代碼、名稱與啟用狀態。</p>
+  <h3>帳號</h3>
+  <ul>
+    <li><b>＋ 開通帳號</b>：輸入公司 Email，選擇角色與可存取門市。顯示名稱自動使用 Email @ 前段。</li>
+    <li><b>批次開通</b>：貼上多個 Email（一行一個），同一角色與門市一次開通，逐筆顯示結果；已存在的帳號會自動略過。</li>
+    <li><b>修改</b>：調整角色、門市、停用帳號（需填原因）。管理者不能變更自己的角色或停用自己。</li>
+  </ul>
+  <div class="note">開通後，同仁直接用公司 Google 帳號登入，不需另設密碼。同仁離職或調店時，請停用帳號或調整門市。</div>
+  <h3>產品資料</h3>
+  <p>上傳公司建檔的 Excel（需有 Code、product_name 欄位），整批取代。用於「輸入型號自動帶入品名」與拍照辨識的品名校正。新品上市時重新上傳即可。</p>
+  <h3>紀錄</h3>
+  <ul>
+    <li><b>帳號與門市異動紀錄</b>：開通、角色、門市、產品資料匯入等。</li>
+    <li><b>匯出紀錄</b>：誰在什麼時間匯出了什麼條件、幾筆。</li>
+  </ul>
+</section>
+
+<!-- 12 FAQ -->
+<section>
+  <h2>12. 常見問題</h2>
+  <table>
+    <tr><th style="width:36%">問題</th><th>處理方式</th></tr>
+    <tr><td>顧客要加買</td><td>訂單建立後不能新增商品，請另開一張新訂單。</td></tr>
+    <tr><td>顧客少買一台／取消一台</td><td>訂單詳細頁該台按「取消」，填寫原因。</td></tr>
+    <tr><td>按錯「完成交付」或「登記到貨」</td><td>在該台按「更正狀態」退回一格，填寫原因。</td></tr>
+    <tr><td>SN 打錯或到貨時漏登</td><td>SN 欄按「更正」或「補登」，填寫原因。</td></tr>
+    <tr><td>出現「此 SN 已登記在其他機器上」</td><td>確認是否掃到別台的標籤；若是前一台登記錯，先更正那一台。</td></tr>
+    <tr><td>出現「資料已被其他人更新」</td><td>有其他同仁同時修改，請按「重新載入」後再操作。</td></tr>
+    <tr><td>拍照辨識結果有錯</td><td>依單據修改有「需核對」的欄位；也可展開「辨識出的文字」修改後重新解析，或改用手動輸入。</td></tr>
+    <tr><td>拍 SN 標籤讀不到</td><td>靠近一點、對準「(S) Serial No.」那一行重拍；或直接手動輸入。</td></tr>
+    <tr><td>電腦上傳 HEIC 照片失敗</td><td>用 iPhone 直接拍照，或先把照片轉成 JPG。</td></tr>
+    <tr><td>登入後顯示「帳號尚未開通」</td><td>請總部管理者開通；或確認是否用了私人 Google 帳號。</td></tr>
+  </table>
+  <div class="footer-note">TC © 2026　預購商品追蹤</div>
+</section>
+
+</body>
+</html>
