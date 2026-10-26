@@ -77,6 +77,7 @@ export function EditOrderDialog({ order, onClose, onSaved }: { order: OrderSumma
           {input('receipt_no')}
         </div>
         <label>{FIELD_LABEL.order_note}<textarea rows={2} value={form.order_note} onChange={(e) => setForm((p) => ({ ...p, order_note: e.target.value }))} /></label>
+        <p className="small muted">需要寄送請寫在這裡（收件人、電話、地址）；寄出後請在「完成交付」的交付備註輸入黑貓單號。</p>
         <label>修改原因（選填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
         {needAck && (
           <label>與既有訂單 {needAck} 的收銀機號、序號、日期相同。確認不是重複的原因（必填）

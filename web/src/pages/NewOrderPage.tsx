@@ -202,6 +202,7 @@ export function NewOrderPage() {
               <label>預結號碼<input value={h.receipt_no} onChange={(e) => set({ receipt_no: e.target.value })} /></label>
             </div>
             <label>訂單備註<textarea rows={2} value={h.order_note} onChange={(e) => set({ order_note: e.target.value })} /></label>
+            <p className="small muted">需要寄送請寫在這裡（收件人、電話、地址）；寄出後請在「完成交付」的交付備註輸入黑貓單號。</p>
             <p className="muted small">序號是收據上的流水號，不是機器 SN；機器 SN 於到貨時登記。</p>
           </section>
 
