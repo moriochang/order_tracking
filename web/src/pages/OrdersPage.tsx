@@ -1,12 +1,54 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
-import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders } from '../lib/api';
-import { fmtDate } from '../lib/format';
+import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders, type SearchField } from '../lib/api';
+import { fmtDate, todayTaipei } from '../lib/format';
 import { ORDER_STATUS_LABEL } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
 import { ArrivalDialog, DeliveryDialog, NotifyDialog } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
+
+const PERIODS = [
+  { key: '', label: '任何時間' },
+  { key: 'today', label: '今天' },
+  { key: '7d', label: '近 7 天' },
+  { key: '30d', label: '近 30 天' },
+  { key: 'month', label: '本月' },
+];
+const STATUS_FILTERS = [
+  { key: '', label: '全部狀態' },
+  { key: 'in_progress', label: '進行中' },
+  { key: 'pending_arrival', label: '有待到貨' },
+  { key: 'arrived_pending_notify', label: '有待通知' },
+  { key: 'notified_pending_pickup', label: '有待取貨' },
+  { key: 'completed', label: '已完成' },
+  { key: 'cancelled', label: '已取消' },
+];
+const FIELDS: { key: SearchField; label: string; placeholder: string }[] = [
+  { key: 'all', label: '全部欄位', placeholder: '姓名、電話、訂單編號、預結號碼、序號、型號、SN' },
+  { key: 'order_no', label: '訂單編號', placeholder: '例：75-011-00348' },
+  { key: 'customer_name', label: '顧客姓名', placeholder: '顧客姓名' },
+  { key: 'customer_phone', label: '電話', placeholder: '電話號碼' },
+  { key: 'receipt_no', label: '預結號碼', placeholder: '例：75022765' },
+  { key: 'receipt_seq', label: '序號', placeholder: '收據序號' },
+  { key: 'model', label: '型號／品名', placeholder: '例：MD3Y4' },
+  { key: 'sn', label: 'SN', placeholder: 'SN' },
+];
+
+// 依結帳日期（台北時間）計算起始日
+function sinceOf(period: string): string | undefined {
+  const today = todayTaipei();
+  const back = (days: number) => {
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - days);
+    return d.toISOString().slice(0, 10);
+  };
+  if (period === 'today') return today;
+  if (period === '7d') return back(6);
+  if (period === '30d') return back(29);
+  if (period === 'month') return `${today.slice(0, 8)}01`;
+  return undefined;
+}
 
 export function OrdersPage() {
   const me = useMe();
@@ -16,7 +58,11 @@ export function OrdersPage() {
   const byModel = params.get('mode') === 'model';
   const all = params.get('all') === '1';   // 型號查詢：也列出沒有欠貨的
   const [input, setInput] = useState(q);
-  const result = useAsync(() => (byModel ? Promise.resolve(null) : searchOrders({ q, storeCode: store || undefined })), [q, store, byModel]);
+  const period = params.get('period') ?? '';
+  const status = params.get('status') ?? '';
+  const field = (params.get('field') ?? 'all') as SearchField;
+  const result = useAsync(() => (byModel ? Promise.resolve(null)
+    : searchOrders({ q, field, storeCode: store || undefined, status, since: sinceOf(period) })), [q, field, store, status, period, byModel]);
   const backlog = useAsync(() => (byModel ? searchBacklog({ q, storeCode: store || undefined, onlyBacklog: false }) : Promise.resolve(null)),
     [q, store, byModel, all]);
   const setParam = (k: string, v: string) => setParams((p) => { if (v) p.set(k, v); else p.delete(k); return p; });
@@ -33,16 +79,34 @@ export function OrdersPage() {
         <button type="button" className={byModel ? 'secondary' : ''} onClick={() => setParam('mode', '')}>依訂單</button>
         <button type="button" className={byModel ? '' : 'secondary'} onClick={() => setParam('mode', 'model')}>依型號查欠貨</button>
       </div>
-      <form className="row gap wrap" onSubmit={submit}>
-        <input className="grow" placeholder={byModel ? '型號或品名，例：MFYN4' : '姓名、電話、訂單編號、預結號碼'} value={input}
-          autoCapitalize={byModel ? 'characters' : undefined} onChange={(e) => setInput(e.target.value)} />
+      <form className="filter-bar" onSubmit={submit}>
+        {!byModel && (
+          <select value={period} onChange={(e) => setParam('period', e.target.value)} aria-label="結帳日期">
+            {PERIODS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+          </select>
+        )}
         {me.stores.length > 1 && (
-          <select value={store} onChange={(e) => setParam('store', e.target.value)}>
+          <select value={store} onChange={(e) => setParam('store', e.target.value)} aria-label="門市">
             <option value="">全部門市</option>
             {me.stores.map((s) => <option key={s.code} value={s.code}>{s.code} {s.name}</option>)}
           </select>
         )}
-        <button type="submit">搜尋</button>
+        {!byModel && (
+          <select value={status} onChange={(e) => setParam('status', e.target.value)} aria-label="狀態">
+            {STATUS_FILTERS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+          </select>
+        )}
+        <div className="input-group grow">
+          {!byModel && (
+            <select value={field} onChange={(e) => setParam('field', e.target.value === 'all' ? '' : e.target.value)} aria-label="搜尋欄位">
+              {FIELDS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+            </select>
+          )}
+          <input className="grow" value={input} onChange={(e) => setInput(e.target.value)}
+            placeholder={byModel ? '型號或品名，例：MFYN4' : FIELDS.find((x) => x.key === field)?.placeholder}
+            autoCapitalize={byModel || field === 'model' || field === 'sn' ? 'characters' : undefined} />
+        </div>
+        <button type="submit">查詢</button>
       </form>
       {byModel ? (
         <>
@@ -56,7 +120,7 @@ export function OrdersPage() {
         </>
       ) : (
         <>
-          <p className="muted small">可依姓名、電話、訂單編號、預結號碼搜尋，顯示最近 50 筆。</p>
+          {result.data && <p className="muted small">共 {result.data.length} 筆{result.data.length >= 100 ? '（只顯示最近 100 筆，請縮小條件）' : ''}</p>}
           <ErrorBanner error={result.error} />
           {result.loading && <div className="muted">載入中…</div>}
           {result.data && (result.data.length ? <OrderTable orders={result.data} /> : <div className="muted">沒有符合的訂單。</div>)}

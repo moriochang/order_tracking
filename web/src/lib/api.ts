@@ -31,14 +31,51 @@ export async function todoCounts(storeCode?: string) {
   return Object.fromEntries(keys.map((k) => [k, rows.reduce((s, r) => s + Number(r[k] ?? 0), 0)])) as Record<string, number>;
 }
 
-export async function searchOrders(opts: { q?: string; storeCode?: string; limit?: number }) {
-  let query = supabase.from('v_order_summary').select('*').order('created_at', { ascending: false }).limit(opts.limit ?? 50);
+export type OrderSearch = {
+  q?: string;
+  field?: SearchField;
+  storeCode?: string;
+  status?: string;     // in_progress / completed / cancelled，或 pending_arrival 等「有…的機器」
+  since?: string;      // 結帳日期起（YYYY-MM-DD）
+  limit?: number;
+};
+export type SearchField = 'all' | 'order_no' | 'customer_name' | 'customer_phone' | 'receipt_no' | 'receipt_seq' | 'model' | 'sn';
+
+// 型號／品名、SN 在商品與單機資料表，先找出符合的訂單 id
+async function orderIdsBy(field: 'model' | 'sn', q: string): Promise<string[]> {
+  const res = field === 'model'
+    ? await supabase.from('order_items').select('order_id').or(`model.ilike.*${q}*,full_product_name.ilike.*${q}*`).limit(300)
+    : await supabase.from('devices').select('order_id').ilike('sn', `*${q}*`).limit(300);
+  return [...new Set((unwrap(res) as { order_id: string }[]).map((r) => r.order_id))];
+}
+
+export async function searchOrders(opts: OrderSearch) {
+  let query = supabase.from('v_order_summary').select('*').order('created_at', { ascending: false }).limit(opts.limit ?? 100);
   if (opts.storeCode) query = query.eq('store_code', opts.storeCode);
+  if (opts.since) query = query.gte('purchase_date', opts.since);
+  if (opts.status === 'in_progress' || opts.status === 'completed' || opts.status === 'cancelled') {
+    query = query.eq('order_status', opts.status);
+  } else if (opts.status) {
+    query = query.gt(opts.status, 0);
+  }
+
   const q = (opts.q ?? '').replace(/[,()*%\\]/g, ' ').trim();
+  const field = opts.field ?? 'all';
   if (q) {
     const digits = q.replace(/[\s-]/g, '');
-    const parts = [`order_no.ilike.*${q}*`, `customer_name.ilike.*${q}*`, `receipt_no.ilike.*${q}*`];
-    if (/^\+?[0-9#]+$/.test(digits)) parts.push(`customer_phone.ilike.*${digits}*`);
+    const parts: string[] = [];
+    if (field === 'all' || field === 'order_no') parts.push(`order_no.ilike.*${q}*`);
+    if (field === 'all' || field === 'customer_name') parts.push(`customer_name.ilike.*${q}*`);
+    if ((field === 'all' || field === 'customer_phone') && /^\+?[0-9#]+$/.test(digits)) parts.push(`customer_phone.ilike.*${digits}*`);
+    if (field === 'all' || field === 'receipt_no') parts.push(`receipt_no.ilike.*${q}*`);
+    if (field === 'all' || field === 'receipt_seq') parts.push(`receipt_seq.ilike.*${q}*`);
+    for (const f of ['model', 'sn'] as const) {
+      if (field === 'all' || field === f) {
+        const ids = await orderIdsBy(f, q);
+        if (ids.length) parts.push(`id.in.(${ids.join(',')})`);
+      }
+    }
+    if (!parts.length) return [] as OrderSummary[];
     query = query.or(parts.join(','));
   }
   return unwrap(await query) as OrderSummary[];
