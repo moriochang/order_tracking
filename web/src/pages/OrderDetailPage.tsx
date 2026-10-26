@@ -188,7 +188,7 @@ export function OrderDetailPage() {
                           : dev.status === 'arrived_pending_notify' ? (
                             <div className="row gap wrap">
                               <button className="step step-notify" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>通知顧客</button>
-                              <button className="link small text-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>直接交付</button>
+                              <button className="step step-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成交付</button>
                             </div>
                           )
                           : dev.status === 'notified_pending_pickup' ? (
@@ -217,7 +217,7 @@ export function OrderDetailPage() {
           </table>
         </div>
         <ErrorBanner error={opError} />
-        <p className="small muted">「已貼」只有已到貨、尚未交付的機器可以勾選。客人在通知前到店，可直接按「直接交付」。</p>
+        <p className="small muted">「已貼」只有已到貨、尚未交付的機器可以勾選。客人在通知前到店，也可以直接按「完成交付」。</p>
       </section>
 
       {/* 4. 通知紀錄 */}
