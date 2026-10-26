@@ -41,8 +41,8 @@ export function HomePage() {
             </>
           );
           return t.tab
-            ? <Link key={t.key} to={`/todo${t.tab === 'arrival' ? '' : `?tab=${t.tab}`}`} className="tile tile-link">{body}</Link>
-            : <div key={t.key} className="tile stat">{body}</div>;
+            ? <Link key={t.key} to={`/todo${t.tab === 'arrival' ? '' : `?tab=${t.tab}`}`} className={`tile tile-link tile-${t.key}`}>{body}</Link>
+            : <div key={t.key} className={`tile stat tile-${t.key}`}>{body}</div>;
         })}
       </section>
       <p className="muted small">數字依每台機器的實際狀態即時計算，不含已取消。點數字可進入待辦清單。</p>
