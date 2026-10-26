@@ -1,5 +1,5 @@
 // 單機作業對話框：登記到貨（SN）、通知顧客、完成交付、更正 SN
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ocrReceipt, rpc } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { linesFromWords } from '../lib/ocrLayout';
@@ -79,19 +79,26 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
 
 export function ArrivalDialog({ device, label, onClose, onSaved }: Props) {
   const [sn, setSn] = useState('');
+  // Mac、iPad、iPhone、Apple Watch、AirPods、HomePod 必須登記 SN（由資料庫依產品分類判斷）
+  const [required, setRequired] = useState<boolean | null>(null);
+  useEffect(() => {
+    rpc<boolean | null>('device_sn_required', { p_device_id: device.id }).then((r) => setRequired(!!r)).catch(() => setRequired(false));
+  }, [device.id]);
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
+  const missing = required === true && !sn.trim();
   return (
     <Dialog title="登記到貨" onClose={onClose}>
       <div className="stack">
         <p className="product-name">{label}</p>
-        <SnInput label="SN（配件沒有 SN 可留空）" value={sn} onChange={setSn} />
+        <SnInput label={required ? 'SN（必填）' : required === false ? 'SN（配件沒有 SN 可留空）' : 'SN'} value={sn} onChange={setSn} />
+        {required && <p className="small warn-text">此商品屬於 Mac、iPad、iPhone、Apple Watch、AirPods、HomePod，必須登記 SN。</p>}
         <p className="small muted">可拍包裝盒標籤自動辨識，辨識後請與標籤核對。系統會檢查 SN 是否已登記在其他機器。</p>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy}
+          <button disabled={busy || required === null || missing}
             onClick={() => run(() => rpc('register_arrival', { p_device_id: device.id, p_expected_version: device.version, p_sn: sn.trim() || null }))}>
-            {busy ? '登記中…' : sn.trim() ? '確認到貨' : '確認到貨（無 SN）'}
+            {busy ? '登記中…' : sn.trim() || required ? '確認到貨' : '確認到貨（無 SN）'}
           </button>
         </div>
       </div>
