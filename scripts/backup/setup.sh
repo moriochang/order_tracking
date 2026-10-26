@@ -23,7 +23,7 @@ echo "已存進鑰匙圈（服務名稱 order-tracking-db）"
 
 echo
 echo "== 3/4 備份資料夾 =="
-echo "在 Finder 打開 Google 雲端硬碟，建立（或選擇）要放備份的資料夾，把它拖進這個視窗後按 Enter。"
+echo "在 Finder 打開 Google 雲端硬碟，建立資料夾「預購商品追蹤_資料庫備份」，把它拖進這個視窗後按 Enter。"
 read -r -p "備份資料夾：" BACKUP_DIR
 BACKUP_DIR="$(echo "$BACKUP_DIR" | sed -e "s/^'//" -e "s/'$//" -e 's/\\ / /g' -e 's/[[:space:]]*$//')"
 mkdir -p "$BACKUP_DIR"
