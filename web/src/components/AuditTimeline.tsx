@@ -73,7 +73,7 @@ export function AuditTimeline({ logs, items, devices, deviceFilter, onClearDevic
             <li key={head.txn_id} className={head.action === 'direct_db_change' ? 'warn' : ''}>
               <div className="tl-head">
                 <span>{fmtDateTime(head.occurred_at)}</span>
-                <span>｜{head.actor_display_name ?? `資料庫帳號 ${head.actor_db_role}`}</span>
+                <span>｜<span className="operator">{head.actor_display_name ?? `資料庫帳號 ${head.actor_db_role}`}</span></span>
                 <span>｜<strong>{ACTION_LABEL[head.action] ?? head.action}</strong></span>
               </div>
               {head.reason && <div className="tl-reason">原因：{head.reason}</div>}

@@ -30,7 +30,7 @@ export function SettingsPage() {
         <ul className="plain small">
           {(audit.data ?? []).map((l) => (
             <li key={l.id}>
-              {fmtDateTime(l.occurred_at)}｜{l.actor_display_name ?? l.actor_db_role}｜{ACTION_LABEL[l.action] ?? l.action}
+              {fmtDateTime(l.occurred_at)}｜<span className="operator">{l.actor_display_name ?? l.actor_db_role}</span>｜{ACTION_LABEL[l.action] ?? l.action}
               {(l.changed_fields ?? []).length > 0 && `｜${(l.changed_fields ?? []).map((f) => `${FIELD_LABEL[f] ?? f}：${String(l.before_data?.[f] ?? '空白')} → ${String(l.after_data?.[f] ?? '空白')}`).join('；')}`}
               {l.operation === 'INSERT' && `｜新增 ${l.entity_type === 'user_store' ? `門市指派 ${l.after_data?.store_code}` : String(l.after_data?.email ?? l.after_data?.code ?? '')}`}
               {l.operation === 'DELETE' && `｜移除 ${l.entity_type === 'user_store' ? `門市指派 ${l.before_data?.store_code}` : ''}`}

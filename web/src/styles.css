@@ -11,6 +11,7 @@
   --danger-bg: #fdecea;
   --info-bg: #eaf2fd;
   --warn-bg: #fff6e0;
+  --operator-bg: #1b7f3b;   /* 操作人姓名：綠底白字 */
   --radius: 10px;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   color: var(--text);
@@ -188,3 +189,4 @@ dl.compact dd { margin: 0; }
 .scan-thumb { max-width: 100%; max-height: 240px; border: 1px solid var(--border); border-radius: 6px; display: block; }
 .item-lines > div { min-height: 1.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
 @media (max-width: 799px) { .item-lines > div { max-width: none; white-space: normal; } }
+.operator { background: var(--operator-bg); color: #fff; padding: 0 6px; border-radius: 4px; white-space: nowrap; }

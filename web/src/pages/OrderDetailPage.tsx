@@ -71,7 +71,7 @@ export function OrderDetailPage() {
       <div className="row between wrap">
         <div>
           <h1>{o.order_no}</h1>
-          <div className="muted small">{o.store_code}・建立於 {fmtDateTime(o.created_at)}・{names.get(o.created_by) ?? ''}</div>
+          <div className="muted small">{o.store_code}・建立於 {fmtDateTime(o.created_at)}・<span className="operator">{names.get(o.created_by) ?? ''}</span></div>
         </div>
         <div className="row gap">
           <span className={`badge order-${o.order_status}`}>{ORDER_STATUS_LABEL[o.order_status]}</span>
@@ -238,7 +238,7 @@ export function OrderDetailPage() {
               const dev = d.devices.find((x) => x.id === n.device_id);
               return (
                 <li key={n.id}>
-                  {fmtDateTime(n.notified_at)}・{names.get(n.operator_id)}・{METHOD_LABEL[n.method] ?? n.method}・{OUTCOME_LABEL[n.outcome] ?? n.outcome}
+                  {fmtDateTime(n.notified_at)}・<span className="operator">{names.get(n.operator_id)}</span>・{METHOD_LABEL[n.method] ?? n.method}・{OUTCOME_LABEL[n.outcome] ?? n.outcome}
                   {dev && <span className="small muted">・{unitName(dev)}</span>}
                   {n.note ? `・${n.note}` : ''}
                 </li>
