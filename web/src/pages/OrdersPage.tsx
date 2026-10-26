@@ -195,8 +195,8 @@ function stepsOf(d: Device): StepKey[] {
   return [];
 }
 
-// 每台單機各佔一行（同商品相鄰排列），登記到貨等操作才知道是哪一台；數量只顯示在同商品的第一行
-type UnitLine = { device: Device; name: string; groupQty: number | null };
+// 每台單機各佔一行（同商品相鄰排列），登記到貨等操作才知道是哪一台；每行數量為 1
+type UnitLine = { device: Device; name: string };
 
 export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onChanged?: () => void }) {
   const ids = orders.map((o) => o.id);
@@ -214,7 +214,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
       const devs = (devices.data ?? [])
         .filter((d) => g.item_ids.includes(d.order_item_id))
         .sort((x, y) => g.item_ids.indexOf(x.order_item_id) - g.item_ids.indexOf(y.order_item_id) || x.unit_no - y.unit_no);
-      devs.forEach((d, i) => lines.push({ device: d, name: g.full_product_name, groupQty: i === 0 ? devs.length : null }));
+      devs.forEach((d) => lines.push({ device: d, name: g.full_product_name }));
     }
     return lines;
   }
@@ -260,7 +260,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                     <span className="product-name">{l.name}{l.device.sn && <span className="small muted">（{l.device.sn}）</span>}</span>
                   ))}
                 </td>
-                <td data-label="數量">{cell((l) => l.groupQty ?? '')}</td>
+                <td data-label="數量">{cell(() => 1)}</td>
                 <td data-label="狀態">
                   {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : cell((l) => <StatusBadge status={l.device.status} />)}
                 </td>
