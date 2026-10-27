@@ -328,4 +328,23 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 .scan-field.ok > .small { color: #248a3d; }
 .scan-field.warn > .small { color: #a15c00; }
 .scan-model { width: 9em; font-family: ui-monospace, SFMono-Regular, monospace; }
-.date-range input { width: auto; }
+
+/* 日期區間選擇 */
+.cal-summary { display: flex; gap: 20px; align-items: baseline; flex-wrap: wrap; }
+.cal-summary > div { display: flex; gap: 6px; align-items: baseline; }
+.cal-nav { display: flex; align-items: flex-start; gap: 4px; }
+.cal-nav > .link { font-size: 1.2rem; padding: 4px 6px; }
+.cal-months { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.cal-title { text-align: center; font-weight: 600; margin-bottom: 6px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px 0; }
+.cal-wd { text-align: center; font-size: 0.8rem; color: var(--muted); padding: 4px 0; }
+.cal-day { background: none; color: var(--text); border: none; border-radius: 8px; min-height: 36px; padding: 0; font-size: 0.95rem; }
+.cal-day:hover:not(:disabled) { background: var(--info-bg); }
+.cal-day:disabled { color: #c7c7cc; background: none; }
+.cal-day.today { font-weight: 700; }
+.cal-day.in { background: var(--info-bg); border-radius: 0; }
+.cal-day.edge { background: var(--primary); color: var(--primary-text); }
+@media (max-width: 640px) {
+  .cal-months { grid-template-columns: 1fr; }
+  .cal-left { display: none; }
+}

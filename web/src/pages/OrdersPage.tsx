@@ -8,6 +8,7 @@ import { ORDER_STATUS_LABEL, canEdit, canExport } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
 import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf, type OrderRef } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
+import { DateRangePicker } from '../components/DateRangePicker';
 
 const PERIODS = [
   { key: '', label: '任何時間' },
@@ -88,6 +89,7 @@ export function OrdersPage() {
   const byModel = params.get('mode') === 'model';
   const all = params.get('all') === '1';   // 型號查詢：也列出沒有欠貨的
   const [input, setInput] = useState(q);
+  const [picking, setPicking] = useState(false);
   const period = params.get('period') ?? '';
   // 自訂區間：起訖日期（YYYY-MM-DD），只填一邊也可以；填反了自動對調
   const [from, to] = [params.get('from') ?? '', params.get('to') ?? ''].sort((a, b) => (a && b ? a.localeCompare(b) : 0));
@@ -114,16 +116,14 @@ export function OrdersPage() {
       </div>
       <form className="filter-bar" onSubmit={submit}>
         {!byModel && (
-          <select value={period} onChange={(e) => setParam('period', e.target.value)} aria-label="結帳日期">
+          <select value={period} onChange={(e) => { setParam('period', e.target.value); if (e.target.value === 'custom') setPicking(true); }} aria-label="結帳日期">
             {PERIODS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
           </select>
         )}
         {!byModel && period === 'custom' && (
-          <div className="row gap date-range">
-            <input type="date" value={from} max={todayTaipei()} aria-label="起始日期" onChange={(e) => setParam('from', e.target.value)} />
-            <span className="muted">至</span>
-            <input type="date" value={to} max={todayTaipei()} aria-label="結束日期" onChange={(e) => setParam('to', e.target.value)} />
-          </div>
+          <button type="button" className="secondary" onClick={() => setPicking(true)}>
+            {from && to ? `${fmtDate(from)} – ${fmtDate(to)}` : '選擇日期區間'}
+          </button>
         )}
         {me.stores.length > 1 && (
           <select value={store} onChange={(e) => setParam('store', e.target.value)} aria-label="門市">
@@ -148,6 +148,10 @@ export function OrdersPage() {
         </div>
         <button type="submit">查詢</button>
       </form>
+      {picking && (
+        <DateRangePicker from={from} to={to} onClose={() => setPicking(false)}
+          onApply={(f, t) => setParams((p) => { p.set('from', f); p.set('to', t); return p; })} />
+      )}
       {byModel ? (
         <>
           <label className="radio small">
