@@ -54,6 +54,27 @@ function receiptBlock(all: string[]) {
   return all.slice(from);
 }
 
+// 欄位檢查：預覽時可直接修改，符合才顯示綠色
+export const REGISTER_NOS = ['010', '011', '012', '013'];   // 門市收銀機號
+export const fieldOk = {
+  receipt_no: (v: string) => /^\d{8}$/.test(v),
+  register_no: (v: string) => REGISTER_NOS.includes(v),
+  receipt_seq: (v: string) => /^\d{1,5}$/.test(v),
+};
+
+// 機號：「機號: 011」；OCR 常把「機號」認錯字，退而在銷售日期附近找 010–013（O、l、I 視為 0、1）
+function findRegister(lines: string[], dateIdx: number) {
+  const fix = (t: string) => t.replace(/[Oo]/g, '0').replace(/[lI|]/g, '1');
+  const m = lines.join('\n').match(/機號\s*[:：]?\s*([0-9OolI|]{2,3})(?![0-9])/);
+  if (m) return fix(m[1]).padStart(3, '0');
+  const near = dateIdx >= 0 ? lines.slice(dateIdx, dateIdx + 3) : lines;
+  for (const l of near) {
+    const t = l.match(/(?:^|[^0-9A-Za-z])([0Oo][1lI][0-3Oo])(?![0-9])/);
+    if (t && REGISTER_NOS.includes(fix(t[1]))) return fix(t[1]);
+  }
+  return '';
+}
+
 export function parseReceiptText(text: string): ParsedReceipt {
   const lines = receiptBlock(normalize(text));
   const out: ParsedReceipt = {
@@ -73,14 +94,10 @@ export function parseReceiptText(text: string): ParsedReceipt {
   const joined = lines.join('\n');
   const d = joined.match(/銷售日期\s*[:：]?\s*(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})/);
   if (d) out.purchase_date = toDate(d[1], d[2], d[3]);
-  const reg = joined.match(/機號\s*[:：]?\s*([0-9A-Za-z]+)/);
-  if (reg) out.register_no = reg[1];
+  out.register_no = findRegister(lines, dateIdx);
   const seq = joined.match(/序號\s*[:：]?\s*([0-9A-Za-z]+)/);
   if (seq) out.receipt_seq = seq[1];
 
-  for (const [key, label] of [['receipt_no', '預結號碼'], ['register_no', '機號'], ['receipt_seq', '序號']] as const) {
-    if (!out[key]) out.warnings.push(`找不到「${label}」，請手動填寫`);
-  }
 
   // ── 商品明細：表頭之後到區塊結尾 ──
   const start = lines.findIndex((l) => /品名/.test(l));

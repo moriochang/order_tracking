@@ -319,3 +319,12 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 }
 .manual section { break-before: auto; }
 .manual mark { background: #ffe58f; color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* 掃描預覽：可直接修改，符合顯示綠色、需核對顯示橘色 */
+.scan-field { display: grid; grid-template-columns: 5em 1fr; align-items: center; gap: 2px 10px; }
+.scan-field > .small { grid-column: 2; }
+.scan-field.ok input, .scan-item.ok .scan-model { border-color: #248a3d; background: #f0faf3; }
+.scan-field.warn input, .scan-item.warn .scan-model { border-color: #c93400; background: #fff6ef; }
+.scan-field.ok > .small { color: #248a3d; }
+.scan-field.warn > .small { color: #a15c00; }
+.scan-model { width: 9em; font-family: ui-monospace, SFMono-Regular, monospace; }

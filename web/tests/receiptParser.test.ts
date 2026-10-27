@@ -110,7 +110,7 @@ test('實際單據：只取型號，數量 1 台（國際條碼、7 碼代碼、
 test('空白或無關文字：不捏造欄位', () => {
   const r = parseReceiptText('hello\nworld');
   assert.deepEqual([r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq, r.items.length], ['', '', '', '', 0]);
-  assert.ok(r.warnings.length >= 4);
+  assert.ok(r.warnings.length >= 1);
 });
 
 test('「消費金額」沒辨識到時，以下的金額、底部條碼、注意事項也不會被當成商品', () => {
@@ -130,4 +130,12 @@ iPhone 18 Pro 256 黑 MJRP4 0點
 0800095988 1 2558 0806`);
   assert.deepEqual(r.items.map((i) => [i.model, i.qty]), [['MJRP4', 1]]);
   assert.deepEqual([r.receipt_no, r.register_no, r.receipt_seq], ['75000003', '011', '240']);
+});
+
+test('機號：「機號」二字認錯時，從銷售日期下一行找 010–013', () => {
+  const base = REAL('2026/10/04', '011', '257', ['APPLE', 'Apple Pencil Pro MX2D3 0點', '1384903 1 4,390 4,390TX']);
+  assert.equal(parseReceiptText(base.replace('機號: 011', '機琥: 011')).register_no, '011');
+  assert.equal(parseReceiptText(base.replace('機號: 011', '橫號:O11')).register_no, '011');
+  assert.equal(parseReceiptText(base.replace('機號: 011', '機號: 11')).register_no, '011');
+  assert.equal(parseReceiptText(base.replace('機號: 011 收銀員: A12163', '收銀員: A12163')).register_no, '');
 });
