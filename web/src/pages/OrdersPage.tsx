@@ -15,6 +15,7 @@ const PERIODS = [
   { key: '7d', label: '近 7 天' },
   { key: '30d', label: '近 30 天' },
   { key: 'month', label: '本月' },
+  { key: 'custom', label: '自訂區間' },
 ];
 const STATUS_FILTERS = [
   { key: '', label: '全部狀態' },
@@ -88,10 +89,13 @@ export function OrdersPage() {
   const all = params.get('all') === '1';   // 型號查詢：也列出沒有欠貨的
   const [input, setInput] = useState(q);
   const period = params.get('period') ?? '';
+  // 自訂區間：起訖日期（YYYY-MM-DD），只填一邊也可以；填反了自動對調
+  const [from, to] = [params.get('from') ?? '', params.get('to') ?? ''].sort((a, b) => (a && b ? a.localeCompare(b) : 0));
+  const range = period === 'custom' ? { since: from || undefined, until: to || undefined } : { since: sinceOf(period) };
   const status = params.get('status') ?? '';
   const field = (params.get('field') ?? 'all') as SearchField;
   const result = useAsync(() => (byModel ? Promise.resolve(null)
-    : searchOrders({ q, field, storeCode: store || undefined, status, since: sinceOf(period) })), [q, field, store, status, period, byModel]);
+    : searchOrders({ q, field, storeCode: store || undefined, status, ...range })), [q, field, store, status, period, from, to, byModel]);
   const backlog = useAsync(() => (byModel ? searchBacklog({ q, storeCode: store || undefined, onlyBacklog: false }) : Promise.resolve(null)),
     [q, store, byModel, all]);
   const setParam = (k: string, v: string) => setParams((p) => { if (v) p.set(k, v); else p.delete(k); return p; });
@@ -113,6 +117,13 @@ export function OrdersPage() {
           <select value={period} onChange={(e) => setParam('period', e.target.value)} aria-label="結帳日期">
             {PERIODS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
           </select>
+        )}
+        {!byModel && period === 'custom' && (
+          <div className="row gap date-range">
+            <input type="date" value={from} max={todayTaipei()} aria-label="起始日期" onChange={(e) => setParam('from', e.target.value)} />
+            <span className="muted">至</span>
+            <input type="date" value={to} max={todayTaipei()} aria-label="結束日期" onChange={(e) => setParam('to', e.target.value)} />
+          </div>
         )}
         {me.stores.length > 1 && (
           <select value={store} onChange={(e) => setParam('store', e.target.value)} aria-label="門市">
@@ -150,7 +161,7 @@ export function OrdersPage() {
       ) : (
         <>
           {result.data && <ExportBar orders={result.data} filters={{
-            時間: PERIODS.find((x) => x.key === period)?.label ?? '',
+            時間: period === 'custom' ? `${from ? fmtDate(from) : '不限'} – ${to ? fmtDate(to) : '不限'}` : PERIODS.find((x) => x.key === period)?.label ?? '',
             門市: store || '全部門市',
             狀態: STATUS_FILTERS.find((x) => x.key === status)?.label ?? '',
             ...(q ? { 搜尋: `${FIELDS.find((x) => x.key === field)?.label}：${q}` } : {}),

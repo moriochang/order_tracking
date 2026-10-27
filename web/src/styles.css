@@ -328,3 +328,4 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 .scan-field.ok > .small { color: #248a3d; }
 .scan-field.warn > .small { color: #a15c00; }
 .scan-model { width: 9em; font-family: ui-monospace, SFMono-Regular, monospace; }
+.date-range input { width: auto; }

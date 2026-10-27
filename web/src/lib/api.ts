@@ -37,6 +37,7 @@ export type OrderSearch = {
   storeCode?: string;
   status?: string;     // in_progress / completed / cancelled，或 pending_arrival 等「有…的機器」
   since?: string;      // 結帳日期起（YYYY-MM-DD）
+  until?: string;      // 結帳日期迄（含當天）
   limit?: number;
 };
 export type SearchField = 'all' | 'order_no' | 'customer_name' | 'customer_phone' | 'receipt_no' | 'receipt_seq' | 'model' | 'sn';
@@ -53,6 +54,7 @@ export async function searchOrders(opts: OrderSearch) {
   let query = supabase.from('v_order_summary').select('*').order('created_at', { ascending: false }).limit(opts.limit ?? 100);
   if (opts.storeCode) query = query.eq('store_code', opts.storeCode);
   if (opts.since) query = query.gte('purchase_date', opts.since);
+  if (opts.until) query = query.lte('purchase_date', opts.until);
   if (opts.status === 'in_progress' || opts.status === 'completed' || opts.status === 'cancelled') {
     query = query.eq('order_status', opts.status);
   } else if (opts.status) {
