@@ -255,8 +255,8 @@ function EditUserDialog({ user, stores, onClose, onSaved }: { user: UserRow; sto
   );
 }
 
-// 產品資料：上傳公司建檔的 Excel（欄位 Code、product_name、大分類、中分類、小分類），整批取代
-type CatalogRow = { code: string; product_name: string; category: string; sub_category: string; detail_category: string };
+// 產品資料：上傳公司建檔的 Excel（欄位 Code、product_name、大分類、中分類、小分類、14.EAN），整批取代
+type CatalogRow = { code: string; product_name: string; category: string; sub_category: string; detail_category: string; ean: string };
 
 async function readCatalogFile(file: File): Promise<CatalogRow[]> {
   const { default: readXlsxFile } = await import('read-excel-file/browser');
@@ -266,13 +266,15 @@ async function readCatalogFile(file: File): Promise<CatalogRow[]> {
     const col = (name: string) => header.indexOf(name);
     if (col('Code') < 0 || col('product_name') < 0) continue;
     const cell = (row: unknown[], name: string) => (col(name) < 0 ? '' : String(row[col(name)] ?? '').trim());
+    const eanCol = header.findIndex((h) => /EAN$/i.test(h));
     for (const row of data.slice(1)) {
       const raw = row[col('Code')];
       // 代碼若被 Excel 存成數字，補回前導 0（建檔代碼為 10 碼）
       const code = typeof raw === 'number' ? String(raw).padStart(10, '0') : String(raw ?? '').trim();
       const name = cell(row, 'product_name');
       if (code && name) {
-        rows.push({ code, product_name: name, category: cell(row, '大分類'), sub_category: cell(row, '中分類'), detail_category: cell(row, '小分類') });
+        rows.push({ code, product_name: name, category: cell(row, '大分類'), sub_category: cell(row, '中分類'), detail_category: cell(row, '小分類'),
+          ean: eanCol < 0 ? '' : String(row[eanCol] ?? '').trim() });
       }
     }
   }
@@ -326,7 +328,7 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
       <h2>產品資料</h2>
       <p className="small muted">
         拍照辨識時用型號比對建檔品名，自動校正辨識錯字。目前 {count.data?.toLocaleString() ?? '…'} 筆。
-        上傳 Excel（需有 Code、product_name 欄位）會整批取代現有資料。
+        上傳 Excel（需有 Code、product_name 欄位；有「14.EAN」欄會一併匯入國際條碼）會整批取代現有資料。
       </p>
       <label className={`button secondary ${busy ? 'disabled' : ''}`}>
         {busy && !rows ? '讀取中…' : '選擇 Excel 檔'}

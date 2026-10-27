@@ -106,7 +106,7 @@ export function EditItemDialog({ item, unitCount = 1, onClose, onSaved }: {
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
   const patch: Record<string, string | null> = {};
   for (const f of ITEM_FIELDS) if (form[f].trim() !== (item[f] ?? '')) patch[f] = form[f].trim() || null;
-  const { names, pick } = useModelNameSuggest(form.model, form.full_product_name, (n) => setForm((p) => ({ ...p, full_product_name: n })));
+  const { lookup, pick } = useModelNameSuggest(form.model, form.barcode, form.full_product_name, (n) => setForm((p) => ({ ...p, full_product_name: n })));
 
   return (
     <Dialog title="修改商品" onClose={onClose}>
@@ -120,7 +120,7 @@ export function EditItemDialog({ item, unitCount = 1, onClose, onSaved }: {
                 setForm((p) => ({ ...p, [f]: v }));
               }} />
             </label>
-            {f === 'full_product_name' && <CatalogNameHint names={names} model={form.model} name={form.full_product_name} onPick={pick} />}
+            {f === 'full_product_name' && <CatalogNameHint lookup={lookup} name={form.full_product_name} onPick={pick} />}
           </div>
         ))}
         <label>修改原因（選填）<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>

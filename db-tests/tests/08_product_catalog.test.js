@@ -29,3 +29,14 @@ test('T70 admin 匯入產品資料；型號由品名取出；同仁可讀不可�
   assert.equal(logs.length, 2);
   assert.deepEqual(logs[0].after_data, { rows: 3, categories: { iPhone: 2, '3rd Party': 1 } });
 });
+
+test('T71 匯入國際條碼：補前導 0 成 14 碼；格式不對的不存', async (t) => {
+  const db = await freshDb(); t.after(() => db.close());
+  await as(db, 'admin', 'select admin_import_catalog($1)', [JSON.stringify([
+    { code: '0000000001', product_name: '示範保護殼 黑', category: '3rd Party', ean: '4895241143618' },
+    { code: '0000000002', product_name: '示範保護殼 白', category: '3rd Party', ean: '12345' },
+    { code: '0000000003', product_name: '示範手機 DEMO4', category: 'iPhone' },
+  ])]);
+  const rows = await as(db, 'staffA', 'select ean from product_catalog order by code');
+  assert.deepEqual(rows.map((x) => x.ean), ['04895241143618', null, null]);
+});

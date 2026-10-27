@@ -172,6 +172,11 @@ export async function catalogByModels(models: string[]) {
   return unwrap(await supabase.from('product_catalog').select('product_name, model').in('model', models)) as CatalogEntry[];
 }
 
+// 產品資料：依國際條碼查建檔品名（條碼已補成 14 碼）
+export async function catalogByEan(gtin14: string) {
+  return unwrap(await supabase.from('product_catalog').select('product_name, model').eq('ean', gtin14)) as CatalogEntry[];
+}
+
 export async function catalogCount() {
   const { count, error } = await supabase.from('product_catalog').select('code', { count: 'exact', head: true });
   if (error) throw new ApiError(error.message);

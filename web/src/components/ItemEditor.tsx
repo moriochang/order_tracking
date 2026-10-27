@@ -1,9 +1,9 @@
 // 商品草稿編輯：型號、國際條碼、數量、完整商品名稱、備註。單機建立時一律為待到貨。
-// 輸入型號後依產品資料帶入品名；同型號有多筆品名時讓同仁選擇。
+// 輸入國際條碼或型號後依產品資料帶入品名；有多筆品名時讓同仁選擇。
 import { useEffect, useState } from 'react';
 import type { DraftItem } from '../lib/types';
-import { isValidGtin } from '../lib/format';
-import { catalogByModels } from '../lib/api';
+import { gtin14, isValidGtin } from '../lib/format';
+import { catalogByEan, catalogByModels } from '../lib/api';
 import type { CatalogEntry } from '../lib/catalogMatch';
 
 export function emptyDraftItem(): DraftItem {
@@ -46,45 +46,52 @@ export function draftItemPayload(item: DraftItem) {
   };
 }
 
-// 依型號查產品資料（輸入停頓 300ms 後查詢）；null 表示尚未查詢或型號太短
-export function useCatalogByModel(model: string) {
-  const key = model.trim().toUpperCase();
+// 依國際條碼或型號查產品資料（輸入停頓 300ms 後查詢）。有條碼時以條碼為準（3rd Party 配件），否則用型號。
+// null 表示尚未查詢、條碼格式不對且型號太短
+export function useCatalogLookup(model: string, barcode: string) {
+  const ean = gtin14(barcode);
+  const m = model.trim().toUpperCase();
+  const key = ean ? `ean:${ean}` : m.length >= 4 ? `model:${m}` : '';
   const [result, setResult] = useState<{ key: string; names: string[] } | null>(null);
   useEffect(() => {
-    if (key.length < 4) return;
+    if (!key) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      catalogByModels([key])
+      (ean ? catalogByEan(ean) : catalogByModels([m]))
         .then((rows: CatalogEntry[]) => { if (!cancelled) setResult({ key, names: [...new Set(rows.map((r) => r.product_name))] }); })
         .catch(() => { if (!cancelled) setResult(null); });
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [key]);
-  return result?.key === key ? result.names : null;
+  if (!key || result?.key !== key) return null;
+  return { names: result.names, by: ean ? `國際條碼 ${barcode.replace(/\s/g, '')}` : `型號 ${model.trim()}` };
 }
 
-// 型號對應品名：只有一筆時自動帶入，但不覆蓋同仁自己輸入的品名。
-// 可覆蓋的情況：品名空白、仍是先前自動帶入的值，或型號已改而品名還是開啟時的原值。
-export function useModelNameSuggest(model: string, name: string, setName: (name: string) => void) {
-  const names = useCatalogByModel(model);
+// 條碼／型號對應品名：只有一筆時自動帶入，但不覆蓋同仁自己輸入的品名。
+// 可覆蓋的情況：品名空白、仍是先前自動帶入的值，或條碼／型號已改而品名還是開啟時的原值。
+export function useModelNameSuggest(model: string, barcode: string, name: string, setName: (name: string) => void) {
+  const lookup = useCatalogLookup(model, barcode);
+  const names = lookup?.names ?? null;
   const [autoName, setAutoName] = useState('');
-  const [initial] = useState({ model: model.trim().toUpperCase(), name });
+  const sig = `${model.trim().toUpperCase()}|${barcode.replace(/\s/g, '')}`;
+  const [initial] = useState({ sig, name });
   useEffect(() => {
     if (names?.length !== 1 || names[0] === name) return;
-    const modelChanged = model.trim().toUpperCase() !== initial.model;
-    if (!name.trim() || name === autoName || (modelChanged && name === initial.name)) {
+    const changed = sig !== initial.sig;
+    if (!name.trim() || name === autoName || (changed && name === initial.name)) {
       setAutoName(names[0]);
       setName(names[0]);
     }
   }, [names]);  // 只在查詢結果變動時執行
-  return { names, pick: (n: string) => { setAutoName(n); setName(n); } };
+  return { lookup, pick: (n: string) => { setAutoName(n); setName(n); } };
 }
 
-export function CatalogNameHint({ names, model, name, onPick }: {
-  names: string[] | null; model: string; name: string; onPick: (name: string) => void;
+export function CatalogNameHint({ lookup, name, onPick }: {
+  lookup: { names: string[]; by: string } | null; name: string; onPick: (name: string) => void;
 }) {
-  if (!names) return null;
-  if (names.length === 0) return <div className="small muted">產品資料中沒有型號 {model.trim()}，請手動輸入品名。</div>;
+  if (!lookup) return null;
+  const { names, by } = lookup;
+  if (names.length === 0) return <div className="small muted">產品資料中沒有{by}，請手動輸入品名。</div>;
   if (names.length === 1) {
     return name === names[0]
       ? <div className="small ok-text">✓ 已依產品資料帶入品名</div>
@@ -92,7 +99,7 @@ export function CatalogNameHint({ names, model, name, onPick }: {
   }
   return (
     <div className="stack tight">
-      <div className="small">型號 {model.trim()} 有 {names.length} 筆品名，請依單據選擇：</div>
+      <div className="small">{by} 有 {names.length} 筆品名，請依單據選擇：</div>
       {names.map((n) => (
         <label key={n} className="radio small">
           <input type="radio" checked={name === n} onChange={() => onPick(n)} />{n}
@@ -104,7 +111,7 @@ export function CatalogNameHint({ names, model, name, onPick }: {
 
 export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v: DraftItem) => void }) {
   const set = (patch: Partial<DraftItem>) => onChange({ ...value, ...patch });
-  const { names, pick } = useModelNameSuggest(value.model, value.full_product_name, (n) => set({ full_product_name: n }));
+  const { lookup, pick } = useModelNameSuggest(value.model, value.barcode, value.full_product_name, (n) => set({ full_product_name: n }));
 
   // 每台單機建立時都是「待到貨」
   function setQty(raw: string) {
@@ -117,7 +124,7 @@ export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v
       <div className="grid3">
         <label>型號<input value={value.model} placeholder="例：MFYN4" autoCapitalize="characters"
           onChange={(e) => set({ model: e.target.value.toUpperCase() })} /></label>
-        <label>國際條碼（選填）<input inputMode="numeric" value={value.barcode} onChange={(e) => set({ barcode: e.target.value })} /></label>
+        <label>國際條碼（選填）<input inputMode="numeric" placeholder="配件可輸入條碼帶品名" value={value.barcode} onChange={(e) => set({ barcode: e.target.value })} /></label>
         <label>
           數量（台）
           <input type="number" inputMode="numeric" min={1} max={999} value={value.devices.length}
@@ -126,10 +133,10 @@ export function ItemEditor({ value, onChange }: { value: DraftItem; onChange: (v
       </div>
       <label>
         完整商品名稱（必填，請依單據完整輸入）
-        <input value={value.full_product_name} placeholder="輸入型號會自動帶入；或依單據上的完整品名輸入"
+        <input value={value.full_product_name} placeholder="輸入國際條碼或型號會自動帶入；或依單據上的完整品名輸入"
           onChange={(e) => set({ full_product_name: e.target.value })} />
       </label>
-      <CatalogNameHint names={names} model={value.model} name={value.full_product_name} onPick={pick} />
+      <CatalogNameHint lookup={lookup} name={value.full_product_name} onPick={pick} />
       <label>商品備註<input value={value.item_note} onChange={(e) => set({ item_note: e.target.value })} /></label>
 
     </div>
