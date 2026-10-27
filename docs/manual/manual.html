@@ -86,10 +86,11 @@
     <div>3. 新增訂單（手動輸入）</div>
     <div>4. 新增訂單（拍照辨識）</div>
     <div>5. 到貨後的處理流程</div>
-    <div>6. 訂單詳細頁</div>
-    <div>7. 待辦清單</div>
-    <div>8. 備註怎麼填</div>
-    <div>9. 常見問題</div>
+    <div>6. 交付流程（顧客取貨）</div>
+    <div>7. 訂單詳細頁</div>
+    <div>8. 待辦清單</div>
+    <div>9. 備註怎麼填</div>
+    <div>10. 常見問題</div>
   </div>
 </section>
 
@@ -257,21 +258,43 @@
     <div class="title"><span class="num">3</span>通知顧客</div>
     <p>聯絡顧客後按 <span class="btn b-notify">通知顧客</span>，選擇方式（電話、簡訊、通訊軟體…）與結果。<b>有聯繫就算已通知</b>，狀態會變成「已通知待取貨」。同一張單其他已到貨的機器可以勾選一起記錄。</p>
   </div>
-  <div class="card">
-    <div class="title"><span class="num">4</span>完成交付</div>
-    <p>顧客取貨時按 <span class="btn b-deliver">完成交付</span>，<b>核對 SN 與實機</b>。視窗上方若有 <span class="warn">⚠ 備註</span>（例如 AC+），請先處理。</p>
-    <ul class="small">
-      <li>交付備註可填：本人取貨、代領人姓名、<b>寄送的黑貓單號</b>。</li>
-      <li>只有已登記到貨（SN 那一步完成）的機器才能交付。</li>
-      <li>顧客在通知前就到店：一樣按 <span class="btn b-deliver">完成交付</span>，系統會自動補記一筆「顧客到店」通知。</li>
-      <li>同一張單取多台：交付視窗會列出這張單其他已到貨的機器，勾選後<b>一次全部交付</b>。</li>
-    </ul>
-  </div>
+  <div class="tip">貨到了：到待辦清單的「待到貨」分頁，在篩選欄輸入型號，從最上面依序登記，就是先訂先給的順序。通知顧客後，這台機器會出現在「待取貨」分頁，等顧客來取。</div>
 </section>
 
-<!-- 6 訂單詳細頁 -->
+<!-- 6 交付流程 -->
 <section>
-  <h2>6. 訂單詳細頁</h2>
+  <h2>6. 交付流程（顧客取貨）</h2>
+  <p>只有已登記到貨（SN 那一步完成）的機器才能交付。</p>
+  <div class="card">
+    <div class="title"><span class="num">1</span>找到訂單</div>
+    <p>在<b>訂單查詢</b>輸入顧客姓名、電話或訂單編號；或到<b>待辦清單</b>的「待取貨」分頁找。</p>
+  </div>
+  <div class="card">
+    <div class="title"><span class="num">2</span>按完成交付</div>
+    <p>在那台機器按 <span class="btn b-deliver">完成交付</span>。視窗上方會顯示訂單編號、顧客與電話，請先確認是本人或代領人。</p>
+  </div>
+  <div class="card">
+    <div class="title"><span class="num">3</span>處理備註、核對實機</div>
+    <p>視窗裡若有 <span class="warn">⚠ 備註</span>（例如 AC+），請先處理。<b>核對 SN 與實機</b>是否一致。</p>
+  </div>
+  <div class="card">
+    <div class="title"><span class="num">4</span>填交付備註、確認</div>
+    <p>交付備註可填：本人取貨、代領人姓名、<b>寄送的黑貓單號</b>。按確認後狀態變成「已交付」。</p>
+  </div>
+  <h3>特殊情況</h3>
+  <table>
+    <tr><th style="width:30%">情況</th><th>處理方式</th></tr>
+    <tr><td>同一張單取多台</td><td>交付視窗會列出這張單其他已到貨的機器，勾選後<b>一次全部交付</b>。</td></tr>
+    <tr><td>還沒通知，顧客就到店</td><td>一樣按 <span class="btn b-deliver">完成交付</span>，系統會自動補記一筆「顧客到店」通知。</td></tr>
+    <tr><td>還沒登記到貨</td><td>先按 <span class="btn b-arrival">登記到貨</span> 輸入 SN，再完成交付。</td></tr>
+    <tr><td>寄送</td><td>寄出後按「完成交付」，在交付備註輸入<b>黑貓單號</b>（收件資料寫在訂單備註）。</td></tr>
+    <tr><td>按錯完成交付</td><td>在該台按「更正狀態」退回「已通知待取貨」，填寫原因。</td></tr>
+  </table>
+</section>
+
+<!-- 7 訂單詳細頁 -->
+<section>
+  <h2>7. 訂單詳細頁</h2>
   <p>在任何列表點<b>訂單編號</b>即可進入。</p>
   <table>
     <tr><th style="width:24%">區塊</th><th>可以做的事</th></tr>
@@ -286,9 +309,9 @@
   <div class="note">所有修改、取消、更正都會在異動紀錄留下操作人與時間，紀錄不能修改或刪除。操作人名字以綠底白字顯示。</div>
 </section>
 
-<!-- 7 待辦清單 -->
+<!-- 8 待辦清單 -->
 <section>
-  <h2>7. 待辦清單</h2>
+  <h2>8. 待辦清單</h2>
   <p>把「現在該做什麼」集中在一起，每一台機器一列，<b>等待最久的排最前面</b>，列上直接有操作按鈕。</p>
   <table>
     <tr><th style="width:18%">分頁</th><th style="width:36%">列出</th><th>排序</th></tr>
@@ -302,9 +325,9 @@
 </section>
 
 
-<!-- 8 備註 -->
+<!-- 9 備註 -->
 <section>
-  <h2>8. 備註怎麼填</h2>
+  <h2>9. 備註怎麼填</h2>
   <table>
     <tr><th style="width:18%">備註</th><th style="width:30%">在哪裡填</th><th>用途與例子</th></tr>
     <tr><td><b>訂單備註</b></td><td>新增訂單、修改訂單</td><td>整張單、跟顧客有關的事。例：下午 3 點後聯絡、代領人王小明、<b>寄送地址與收件人</b></td></tr>
@@ -321,9 +344,9 @@
 
 
 
-<!-- 9 FAQ -->
+<!-- 10 FAQ -->
 <section>
-  <h2>9. 常見問題</h2>
+  <h2>10. 常見問題</h2>
   <table>
     <tr><th style="width:36%">問題</th><th>處理方式</th></tr>
     <tr><td>顧客要加買</td><td>訂單建立後不能新增商品，請另開一張新訂單。</td></tr>
