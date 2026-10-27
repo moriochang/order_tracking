@@ -11,7 +11,8 @@ import { Dialog, ErrorBanner } from './ui';
 
 export type ScanResult = { raw_text: string; parsed: ParsedReceipt; provider: string; image_url?: string };
 
-// 依產品資料校正品名；找不到型號時提示核對。產品資料尚未匯入或讀取失敗時略過。
+// 依型號帶入產品資料的正式品名：只有一筆就直接用；多筆時取跟單據最接近的；找不到型號時提示核對。
+// 產品資料尚未匯入或讀取失敗時略過。
 async function withCatalog(parsed: ParsedReceipt): Promise<ParsedReceipt> {
   const models = [...new Set(parsed.items.map((i) => i.model).filter(Boolean))];
   const catalog = await catalogByModels(models).catch(() => null);
@@ -20,12 +21,11 @@ async function withCatalog(parsed: ParsedReceipt): Promise<ParsedReceipt> {
     ...parsed,
     items: parsed.items.map((it) => {
       if (!it.model) return it;
-      if (!catalog.some((c) => c.model === it.model)) {
-        return { ...it, notes: [...it.notes, `產品資料中找不到型號 ${it.model}，請核對品名`] };
-      }
-      const fixed = matchCatalogName(it.full_product_name, it.model, catalog);
-      return fixed
-        ? { ...it, full_product_name: fixed, fixes: [...it.fixes, `品名已依產品資料校正（辨識為「${it.full_product_name}」）`] }
+      const names = [...new Set(catalog.filter((c) => c.model === it.model).map((c) => c.product_name))];
+      if (!names.length) return { ...it, notes: [...it.notes, `產品資料中找不到型號 ${it.model}，請核對品名`] };
+      const fixed = names.length === 1 ? names[0] : matchCatalogName(it.full_product_name, it.model, catalog);
+      return fixed && fixed !== it.full_product_name
+        ? { ...it, full_product_name: fixed, fixes: [...it.fixes, `品名已依型號帶入產品資料（單據為「${it.full_product_name}」）`] }
         : it;
     }),
   };
@@ -69,7 +69,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
           <input type="file" accept="image/*" className="hidden" disabled={busy}
             onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
-        <p className="small muted">單據放平擺正、光線充足。系統只讀「預購明細 Pre-Sale」到底部條碼這一段，下方注意事項不用拍進去。可以從照片選取。</p>
+        <p className="small muted">單據放平擺正、光線充足。系統只讀「預購明細 Pre-Sale」到「消費金額」這一段，抓型號與數量。可以從照片選取。</p>
         <ErrorBanner error={error} />
         {imageUrl && <a href={imageUrl} target="_blank" rel="noreferrer"><img src={imageUrl} alt="單據照片" className="scan-thumb" /></a>}
 
@@ -114,7 +114,7 @@ function ScanPreview({ parsed }: { parsed: ParsedReceipt }) {
             <span className="product-name">{it.full_product_name || '（品名未辨識）'}</span>
             {' '}× {it.qty ?? '?'} 台
             <span className="small muted">
-              {it.barcode && `・條碼 ${it.barcode}`}
+              {it.model && `・型號 ${it.model}`}
               {it.merged_lines > 1 && `・由 ${it.merged_lines} 行合併`}
             </span>
             {it.fixes.map((n) => <div key={n} className="small ok-text">✓ {n}</div>)}

@@ -44,54 +44,83 @@ MBN 13 8G 256GB 銀 MHFA4 0點
 2026/10/01 19:57:38 9999 011 00102
 *07501100102*`;
 
-test('iPad 單：單據欄位、重複列印合併、條碼', () => {
+test('iPad 單：單據欄位、重複列印依型號合併', () => {
   const r = parseReceiptText(IPAD);
   assert.deepEqual(
     [r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq],
     ['75000001', '2026-09-24', '011', '101'],
   );
-  assert.deepEqual(r.items.map((i) => [i.full_product_name, i.model, i.barcode, i.product_code, i.qty, i.merged_lines]), [
-    ['iPad Air 11 WF 128 藍 MH314', 'MH314', '195950823844', '', 3, 3],
-    ['iPad Air 11 WF 128 星光 MH334', 'MH334', '195950824070', '', 3, 3],
-    ['iPad Air 11 WF 128 紫 MH344', 'MH344', '195950824308', '', 3, 3],
+  assert.deepEqual(r.items.map((i) => [i.model, i.qty, i.merged_lines]), [
+    ['MH314', 3, 3], ['MH334', 3, 3], ['MH344', 3, 3],
   ]);
-  assert.ok(r.checks.length === 2 && r.checks.every((c) => c.ok));
   assert.deepEqual(r.warnings, []);
 });
 
-test('MacBook 單：7 碼內部代碼不當條碼、負數量行不加入並提示', () => {
+test('MacBook 單：負數量行不加入並提示', () => {
   const r = parseReceiptText(MBN);
   assert.equal(r.receipt_no, '75000002');
   assert.equal(r.receipt_seq, '102');
-  assert.deepEqual(r.items.map((i) => [i.full_product_name, i.barcode, i.product_code, i.qty]), [
-    ['MBN 13 8G 256GB 胭粉 MHFH4', '', '1000001', 7],
-    ['MBN 13 8G 256GB 銀 MHFA4', '', '1000002', 7],
-  ]);
+  assert.deepEqual(r.items.map((i) => [i.model, i.qty]), [['MHFH4', 7], ['MHFA4', 7]]);
   assert.equal(r.warnings.length, 1);
   assert.match(r.warnings[0], /-6/);
-  assert.ok(r.checks.every((c) => c.ok));
 });
 
-test('辨識錯字會被交叉核對攔下', () => {
-  const r = parseReceiptText(IPAD
-    .replace('195950824070 1 24,900', '195950824071 1 24,900')   // 條碼錯一碼
-    .replace('2026/09/24 17:28:52 9999 011 00101', '2026/09/24 17:28:52 9999 011 00158'));
-  assert.ok(r.items.some((i) => i.notes.some((n) => /檢查碼/.test(n))));
-  assert.equal(r.checks.find((c) => /底部/.test(c.label))?.ok, false);
+// 依實際單據（IMG_5825–5827）改寫，只要型號與數量；條碼、內部代碼、金額與消費金額以下都不取
+const REAL = (date: string, reg: string, seq: string, rows: string[]) => `立展資訊科技股份有限公司
+預購明細Pre-Sale
+iStore台中店
+- TC - iStore Tai Chung Store
+地址:台中市台灣大道三段301號2樓
+電話:0422586095
+*75020908*
+銷售日期: ${date}
+機號: ${reg} 收銀員: A12163 序號: ${seq}
+產品代碼/品名 數量 單價 點數/金額
+${rows.join('\n')}
+-------------- ---- ---------- ---------
+消費金額:
+(未稅) (稅額) (合計)
+90,286 4,514 94,800
+UCARD 94,800
+卡號 ****2020
+應稅科技: NT$94,800
+2026/10/03 16:17:17 5802 011 00240
+*07501100240*
+實體店面無七天鑑賞期。
+2.致電 0800-095-988 或 02-2558-0806`;
 
-  const r2 = parseReceiptText(MBN.replace('1000002 7 22,900', '1000002 1 22,900'));   // 數量 7 認成 1
-  assert.ok(r2.items[1].notes.some((n) => /不符/.test(n)));
-  const r3 = parseReceiptText(MBN.replace('1000002 7 22,900 160,300', '1000002 7 22,900 160,800'));   // 金額認錯
-  assert.equal(r3.checks.find((c) => /合計/.test(c.label))?.ok, false);
+test('實際單據：只取型號與數量（國際條碼、7 碼代碼、售價都忽略）', () => {
+  const iphone = parseReceiptText(REAL('2026/10/03', '011', '240', [
+    'APPLE', 'iPhone 18 Pro 256 黑 MJRP4 0點', '195951419343 1 44,900 44,900TX',
+    'APPLE', 'iPhone 18 Pro Max 256 黑 MJXN4 0點', '195951413709 1 49,900 49,900TX',
+  ]));
+  assert.deepEqual(iphone.items.map((i) => [i.model, i.qty, i.notes]), [['MJRP4', 1, []], ['MJXN4', 1, []]]);
+  assert.deepEqual([iphone.purchase_date, iphone.register_no, iphone.receipt_seq], ['2026-10-03', '011', '240']);
+
+  const ipad = parseReceiptText(REAL('2026/10/04', '011', '257', [
+    'APPLE', 'iPad Air 11 WF 256 灰 MH354 0點', '1389583 1 28,400 28,400TX',
+    'APPLE', 'Apple Pencil Pro MX2D3 0點', '1384903 1 4,390 4,390TX',
+  ]));
+  assert.deepEqual(ipad.items.map((i) => [i.model, i.qty]), [['MH354', 1], ['MX2D3', 1]]);
+
+  const imac = parseReceiptText(REAL('2026/10/02', '012', '1313', [
+    'APPLE', 'M4 iMac 24 10C 16 512 藍 MWV33 0點', '1386687 1 64,900 64,900TX',
+    'APPLE', 'M4 iMac 24 10C 16 512 紫 Z1ET 0點', '1391648 1 64,900 64,900TX',
+  ]));
+  assert.deepEqual(imac.items.map((i) => [i.model, i.qty]), [['MWV33', 1], ['Z1ET', 1]]);
+  assert.deepEqual(imac.warnings, []);
 });
 
-test('千分位被拆開時仍能正確對應數量、單價、金額', () => {
+test('數量認錯時用單價、金額攔下', () => {
+  const r = parseReceiptText(MBN.replace('1000002 7 22,900', '1000002 1 22,900'));   // 數量 7 認成 1
+  assert.ok(r.items[1].notes.some((n) => /數量 1 可能辨識錯誤/.test(n)));
+});
+
+test('千分位被拆開時數量仍正確、不誤報', () => {
   const r = parseReceiptText(MBN
     .replace('1000001 7 22,900 160,300TX', '1000001 7 22, 900 160 ,300TX')
     .replace('1000002 7 22,900 160,300TX', '1000002 7 22,900 160, 300 TX'));
-  assert.deepEqual(r.items.map((i) => [i.qty, i.unit_price, i.amount, i.notes]), [
-    [7, 22900, 160300, []], [7, 22900, 160300, []],
-  ]);
+  assert.deepEqual(r.items.map((i) => [i.qty, i.notes]), [[7, []], [7, []]]);
 });
 
 test('空白或無關文字：不捏造欄位', () => {
@@ -100,10 +129,8 @@ test('空白或無關文字：不捏造欄位', () => {
   assert.ok(r.warnings.length >= 5);
 });
 
-test('只解析明細區塊：「消費金額」沒辨識到時，底部注意事項也不會被當成商品', () => {
-  const r = parseReceiptText(`立展資訊科技股份有限公司
-預購明細Pre-Sale
-iStore台中店
+test('「消費金額」沒辨識到時，以下的金額、底部條碼、注意事項也不會被當成商品', () => {
+  const r = parseReceiptText(`預購明細Pre-Sale
 *75000003*
 銷售日期: 2026/10/03
 機號: 011 收銀員: A00001 序號: 240
@@ -111,17 +138,12 @@ iStore台中店
 APPLE
 iPhone 18 Pro 256 黑 MJRP4 0點
 195951419343 1 44,900 44,900TX
-應稅科技: NT$44,900
+(未稅) (稅額) (合計)
+42,762 2,138 44,900
 2026/10/03 16:17:17 9999 011 00240
-*07501100240*
+07501100240
 實體店面無七天鑑賞期。
-產品保固為購買當日起始計算
-你可連同全新的Apple 產品一起購買 AppleCare+
-2.致電 0800-095-988 或 02-2558-0806
-0800095988 1 2558 0806
-NT$1,000`);
-  assert.equal(r.items.length, 1);
-  assert.equal(r.items[0].model, 'MJRP4');
+0800095988 1 2558 0806`);
+  assert.deepEqual(r.items.map((i) => [i.model, i.qty]), [['MJRP4', 1]]);
   assert.deepEqual([r.receipt_no, r.register_no, r.receipt_seq], ['75000003', '011', '240']);
-  assert.ok(r.checks.every((c) => c.ok), JSON.stringify(r.checks));
 });
