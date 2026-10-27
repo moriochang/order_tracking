@@ -86,7 +86,7 @@
     <div>3. 新增訂單（手動輸入）</div>
     <div>4. 新增訂單（拍照辨識）</div>
     <div>5. 到貨後的處理流程</div>
-    <div>6. 交付流程（顧客取貨）</div>
+    <div>6. 取貨流程</div>
     <div>7. 訂單詳細頁</div>
     <div>8. 待辦清單</div>
     <div>9. 備註怎麼填</div>
@@ -128,7 +128,7 @@
     <div class="step" style="background:var(--c-arrival)"><b>待到貨</b>等貨中</div><div class="arrow">→</div>
     <div class="step" style="background:var(--c-notify)"><b>已到貨待通知</b>登記到貨、SN</div><div class="arrow">→</div>
     <div class="step" style="background:var(--c-pickup)"><b>已通知待取貨</b>已聯絡顧客</div><div class="arrow">→</div>
-    <div class="step" style="background:var(--c-deliver)"><b>已交付</b>顧客已取貨</div>
+    <div class="step" style="background:var(--c-deliver)"><b>已取貨</b>顧客已領走</div>
   </div>
   <p>「<b>已貼</b>」（紫色）是另外的標記：機器到貨後，在實機上貼標留貨，就把它勾起來。</p>
 </section>
@@ -142,7 +142,7 @@
     <div style="background:var(--c-notify)"><b>4</b>待通知</div>
     <div style="background:var(--c-label)"><b>1</b>待貼</div>
     <div style="background:var(--c-pickup)"><b>1</b>待取貨</div>
-    <div style="background:var(--c-deliver)"><b>1</b>已交付（統計）</div>
+    <div style="background:var(--c-deliver)"><b>1</b>已取貨（統計）</div>
   </div>
   <p>數字是「幾台機器」，即時計算。<b>點方塊會直接進入待辦清單的對應分頁</b>。</p>
 
@@ -153,7 +153,7 @@
     <tr><td><span class="btn b-arrival">登記到貨</span></td><td>待到貨</td><td>開啟登記視窗，輸入或拍照辨識 SN</td></tr>
     <tr><td><span class="btn b-label">已貼</span></td><td>已到貨、還沒貼標</td><td>直接標記已貼</td></tr>
     <tr><td><span class="btn b-notify">通知顧客</span></td><td>已到貨待通知</td><td>記錄通知方式與結果</td></tr>
-    <tr><td><span class="btn b-deliver">完成交付</span></td><td>已通知待取貨</td><td>確認交付，可填交付備註</td></tr>
+    <tr><td><span class="btn b-deliver">完成取貨</span></td><td>已通知待取貨</td><td>確認取貨，可填取貨備註</td></tr>
   </table>
   <p>品名旁的 <span class="warn">⚠ AC+</span> 這類橘色文字是備註提醒（見第 9 章）。手機上每台機器會顯示成一張小卡片，左側色條代表狀態。</p>
 </section>
@@ -262,34 +262,34 @@
   <div class="tip">貨到了：到待辦清單的「待到貨」分頁，在篩選欄輸入型號，從最上面依序登記，就是先訂先給的順序。通知顧客後，這台機器會出現在「待取貨」分頁，等顧客來取。</div>
 </section>
 
-<!-- 6 交付流程 -->
+<!-- 6 取貨流程 -->
 <section>
-  <h2>6. 交付流程（顧客取貨）</h2>
-  <p>只有已登記到貨（SN 那一步完成）的機器才能交付。</p>
+  <h2>6. 取貨流程</h2>
+  <p>只有已登記到貨（SN 那一步完成）的機器才能完成取貨。</p>
   <div class="card">
     <div class="title"><span class="num">1</span>找到訂單</div>
     <p>在<b>訂單查詢</b>輸入顧客姓名、電話或訂單編號；或到<b>待辦清單</b>的「待取貨」分頁找。</p>
   </div>
   <div class="card">
-    <div class="title"><span class="num">2</span>按完成交付</div>
-    <p>在那台機器按 <span class="btn b-deliver">完成交付</span>。視窗上方會顯示訂單編號、顧客與電話，請先確認是本人或代領人。</p>
+    <div class="title"><span class="num">2</span>按完成取貨</div>
+    <p>在那台機器按 <span class="btn b-deliver">完成取貨</span>。視窗上方會顯示訂單編號、顧客與電話，請先確認是本人或代領人。</p>
   </div>
   <div class="card">
     <div class="title"><span class="num">3</span>處理備註、核對實機</div>
     <p>視窗裡若有 <span class="warn">⚠ 備註</span>（例如 AC+），請先處理。<b>核對 SN 與實機</b>是否一致。</p>
   </div>
   <div class="card">
-    <div class="title"><span class="num">4</span>填交付備註、確認</div>
-    <p>交付備註可填：本人取貨、代領人姓名、<b>寄送的黑貓單號</b>。按確認後狀態變成「已交付」。</p>
+    <div class="title"><span class="num">4</span>填取貨備註、確認</div>
+    <p>取貨備註可填：本人取貨、代領人姓名、<b>寄送的黑貓單號</b>。按確認後狀態變成「已取貨」。</p>
   </div>
   <h3>特殊情況</h3>
   <table>
     <tr><th style="width:30%">情況</th><th>處理方式</th></tr>
-    <tr><td>同一張單取多台</td><td>交付視窗會列出這張單其他已到貨的機器，勾選後<b>一次全部交付</b>。</td></tr>
-    <tr><td>還沒通知，顧客就到店</td><td>一樣按 <span class="btn b-deliver">完成交付</span>，系統會自動補記一筆「顧客到店」通知。</td></tr>
-    <tr><td>還沒登記到貨</td><td>先按 <span class="btn b-arrival">登記到貨</span> 輸入 SN，再完成交付。</td></tr>
-    <tr><td>寄送</td><td>寄出後按「完成交付」，在交付備註輸入<b>黑貓單號</b>（收件資料寫在訂單備註）。</td></tr>
-    <tr><td>按錯完成交付</td><td>在該台按「更正狀態」退回「已通知待取貨」，填寫原因。</td></tr>
+    <tr><td>同一張單取多台</td><td>取貨視窗會列出這張單其他已到貨的機器，勾選後<b>一次全部完成取貨</b>。</td></tr>
+    <tr><td>還沒通知，顧客就到店</td><td>一樣按 <span class="btn b-deliver">完成取貨</span>，系統會自動補記一筆「顧客到店」通知。</td></tr>
+    <tr><td>還沒登記到貨</td><td>先按 <span class="btn b-arrival">登記到貨</span> 輸入 SN，再完成取貨。</td></tr>
+    <tr><td>寄送</td><td>寄出後按「完成取貨」，在取貨備註輸入<b>黑貓單號</b>（收件資料寫在訂單備註）。</td></tr>
+    <tr><td>按錯完成取貨</td><td>在該台按「更正狀態」退回「已通知待取貨」，填寫原因。</td></tr>
   </table>
 </section>
 
@@ -301,12 +301,12 @@
     <tr><th style="width:24%">區塊</th><th>可以做的事</th></tr>
     <tr><td>訂單資料</td><td>「修改」顧客、電話、機號、序號、預結號碼、訂單備註（日期不能修改）（修改機號或序號，訂單編號會跟著更新）；「取消訂單」需填原因</td></tr>
     <tr><td>商品明細</td><td>每台一行。「修改」品名、型號、條碼、商品備註（同一批建立的多台會一起修改；改型號或條碼一樣會自動帶入品名）；「取消」單台需填原因</td></tr>
-    <tr><td>單機</td><td>每台的 SN、狀態、通知、已貼、到貨、交付時間與下一步按鈕；「更正」SN；「更正狀態」；「歷史」看這台的所有異動</td></tr>
+    <tr><td>單機</td><td>每台的 SN、狀態、通知、已貼、到貨、取貨時間與下一步按鈕；「更正」SN；「更正狀態」；「歷史」看這台的所有異動</td></tr>
     <tr><td>通知紀錄</td><td>每一次通知的時間、操作人、方式與結果</td></tr>
     <tr><td>異動紀錄</td><td>誰、什麼時候、改了什麼、原因。可依類別篩選</td></tr>
   </table>
   <h3>更正狀態（按錯時使用）</h3>
-  <p>按「<b>更正狀態</b>」可以退回一格，例如「已交付 → 已通知待取貨」、「已到貨待通知 → 待到貨」（會清除 SN 與已貼）。必須填寫原因，紀錄會保留。</p>
+  <p>按「<b>更正狀態</b>」可以退回一格，例如「已取貨 → 已通知待取貨」、「已到貨待通知 → 待到貨」（會清除 SN 與已貼）。必須填寫原因，紀錄會保留。</p>
   <div class="note">所有修改、取消、更正都會在異動紀錄留下操作人與時間，紀錄不能修改或刪除。操作人名字以綠底白字顯示。</div>
 </section>
 
@@ -333,13 +333,13 @@
     <tr><th style="width:18%">備註</th><th style="width:30%">在哪裡填</th><th>用途與例子</th></tr>
     <tr><td><b>訂單備註</b></td><td>新增訂單、修改訂單</td><td>整張單、跟顧客有關的事。例：下午 3 點後聯絡、代領人王小明、<b>寄送地址與收件人</b></td></tr>
     <tr><td><b>商品備註</b></td><td>新增或修改商品</td><td>跟這項商品有關、交機時要處理的事。例：<b>AC+</b>、保貼。建立後也可在訂單詳細頁按「修改」補上</td></tr>
-    <tr><td><b>交付備註</b></td><td>完成交付時</td><td>例：本人取貨、代領人姓名、<b>黑貓單號</b></td></tr>
+    <tr><td><b>取貨備註</b></td><td>完成取貨時</td><td>例：本人取貨、代領人姓名、<b>黑貓單號</b></td></tr>
   </table>
-  <p>商品備註會以橘色 <span class="warn">⚠ AC+</span> 顯示在首頁、訂單查詢、待辦清單，並在<b>完成交付視窗</b>醒目提示，交機時不會漏掉。</p>
+  <p>商品備註會以橘色 <span class="warn">⚠ AC+</span> 顯示在首頁、訂單查詢、待辦清單，並在<b>完成取貨視窗</b>醒目提示，交機時不會漏掉。</p>
   <h3>寄送流程</h3>
   <ol>
     <li>建立訂單時，把收件人、電話、地址寫在<b>訂單備註</b>。</li>
-    <li>寄出後，在那台機器按「完成交付」，於<b>交付備註</b>輸入黑貓單號。</li>
+    <li>寄出後，在那台機器按「完成取貨」，於<b>取貨備註</b>輸入黑貓單號。</li>
   </ol>
 </section>
 
@@ -352,7 +352,7 @@
     <tr><th style="width:36%">問題</th><th>處理方式</th></tr>
     <tr><td>顧客要加買</td><td>訂單建立後不能新增商品，請另開一張新訂單。</td></tr>
     <tr><td>顧客少買一台／取消一台</td><td>訂單詳細頁該台按「取消」，填寫原因。</td></tr>
-    <tr><td>按錯「完成交付」或「登記到貨」</td><td>在該台按「更正狀態」退回一格，填寫原因。</td></tr>
+    <tr><td>按錯「完成取貨」或「登記到貨」</td><td>在該台按「更正狀態」退回一格，填寫原因。</td></tr>
     <tr><td>SN 打錯或到貨時漏登</td><td>SN 欄按「更正」或「補登」，填寫原因。</td></tr>
     <tr><td>出現「此 SN 已登記在其他機器上」</td><td>確認是否掃到別台的標籤；若是前一台登記錯，先更正那一台。</td></tr>
     <tr><td>出現「資料已被其他人更新」</td><td>有其他同仁同時修改，請按「重新載入」後再操作。</td></tr>

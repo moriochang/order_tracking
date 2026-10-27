@@ -145,7 +145,7 @@ export function TodoPage() {
                           <button type="button" className="step step-notify" onClick={() => setAction({ kind: 'notify', row: r })}>{r.status === 'notified_pending_pickup' ? '再次通知' : '通知顧客'}</button>
                         )}
                         {(tab === 'pickup' || tab === 'notify' || (tab === 'all' && r.status !== 'pending_arrival')) && (
-                          <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成交付</button>
+                          <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成取貨</button>
                         )}
                       </div>
                     </td>

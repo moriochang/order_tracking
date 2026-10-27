@@ -1,4 +1,4 @@
-// 單機作業對話框：登記到貨（SN）、通知顧客、完成交付、更正 SN
+// 單機作業對話框：登記到貨（SN）、通知顧客、完成取貨、更正 SN
 import { useEffect, useState } from 'react';
 import { ocrReceipt, rpc } from '../lib/api';
 import { compressImage } from '../lib/image';
@@ -165,7 +165,7 @@ export function NotifyDialog({ device, others, label, order, onClose, onSaved }:
   );
 }
 
-// 可一起交付的其他機器（同一張訂單、已登記到貨；待到貨的不會列入）
+// 可一起取貨的其他機器（同一張訂單、已登記到貨；待到貨的不會列入）
 export type DeliveryOther = { device: Device; label: string; note?: string };
 
 export function DeliveryDialog({ device, label, order, itemNote, others = [], onClose, onSaved }: Props & {
@@ -179,7 +179,7 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], on
   const all: DeliveryOther[] = [{ device, label, note: notesOf(itemNote, device.note) }, ...others];
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  // 逐台交付；中途失敗時已完成的保留，畫面顯示失敗原因
+  // 逐台取貨；中途失敗時已完成的保留，畫面顯示失敗原因
   async function deliver() {
     setBusy(true); setError(null);
     const ok: string[] = [...done];
@@ -200,7 +200,7 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], on
 
   const remaining = picked.filter((id) => !done.includes(id)).length;
   return (
-    <Dialog title="完成交付" onClose={onClose}>
+    <Dialog title="完成取貨" onClose={onClose}>
       <div className="stack">
         <OrderHeader order={order} />
         <div className="stack tight">
@@ -210,7 +210,7 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], on
                 onChange={() => toggle(o.device.id)} />
               <span>
                 <span className="product-name">{o.label}</span>
-                {done.includes(o.device.id) && <span className="ok-text small">　✓ 已交付</span>}
+                {done.includes(o.device.id) && <span className="ok-text small">　✓ 已取貨</span>}
                 <span className="small">　SN：<b>{o.device.sn ?? '無'}</b></span>
                 {o.note && <span className="device-note">⚠ {o.note}</span>}
                 {o.device.status === 'arrived_pending_notify' && <span className="small muted">（尚未通知，會自動記「顧客到店」）</span>}
@@ -219,12 +219,12 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], on
           ))}
         </div>
         <p className="small muted">請與實機核對 SN；有 ⚠ 備註的請先處理再交機。</p>
-        <label>交付備註（選填，套用到勾選的每一台）<input value={note} placeholder="例：本人取貨、代領人姓名、黑貓單號" onChange={(e) => setNote(e.target.value)} /></label>
+        <label>取貨備註（選填，套用到勾選的每一台）<input value={note} placeholder="例：本人取貨、代領人姓名、黑貓單號" onChange={(e) => setNote(e.target.value)} /></label>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose} disabled={busy}>取消</button>
           <button disabled={busy || remaining === 0} onClick={deliver}>
-            {busy ? '處理中…' : `確認交付（${remaining} 台）`}
+            {busy ? '處理中…' : `確認取貨（${remaining} 台）`}
           </button>
         </div>
       </div>

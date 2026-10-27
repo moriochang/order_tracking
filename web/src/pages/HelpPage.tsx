@@ -79,7 +79,7 @@ function highlight(html: string, terms: string[]) {
   return box.innerHTML;
 }
 
-const SUGGESTIONS = ['登記到貨', 'SN', '完成交付', '通知', '國際條碼', '保貼', '寄送', '更正', '取消', 'AC+'];
+const SUGGESTIONS = ['登記到貨', 'SN', '完成取貨', '通知', '國際條碼', '保貼', '寄送', '更正', '取消', 'AC+'];
 
 export function HelpPage() {
   const manual = useMemo(parseManual, []);
@@ -112,7 +112,7 @@ export function HelpPage() {
       <h1>操作教學</h1>
       <form className="filter-bar" onSubmit={(e) => { e.preventDefault(); search(input); }}>
         <div className="input-group">
-          <input className="grow" type="search" value={input} placeholder="搜尋，例如：交付、SN、保貼"
+          <input className="grow" type="search" value={input} placeholder="搜尋，例如：取貨、SN、保貼"
             onChange={(e) => search(e.target.value)} />
         </div>
       </form>

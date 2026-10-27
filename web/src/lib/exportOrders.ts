@@ -6,7 +6,7 @@ import { STATUS_LABEL } from './labels';
 import type { OrderSummary } from './types';
 
 const HEADER = ['訂單編號', '門市', '顧客', '電話', '結帳日期', '機號', '序號', '預結號碼', '品名', '型號', '國際條碼',
-  'SN', '狀態', '已貼', '到貨時間', '最近通知', '交付時間', '單機備註', '訂單備註'];
+  'SN', '狀態', '已貼', '到貨時間', '最近通知', '取貨時間', '單機備註', '訂單備註'];
 const WIDTHS = [16, 6, 10, 13, 11, 6, 8, 12, 34, 9, 15, 14, 12, 6, 17, 17, 17, 20, 20];
 
 async function buildRows(orders: OrderSummary[]): Promise<string[][]> {

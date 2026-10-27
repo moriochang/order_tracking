@@ -177,7 +177,7 @@ function BacklogTable({ rows: raw, all }: { rows: BacklogRow[]; all: boolean }) 
         <table className="list">
           <thead>
             <tr>
-              <th>結帳日期</th><th>訂單編號</th><th>顧客</th><th>品名</th><th>訂購</th><th>欠貨</th><th>已到貨未交付</th><th>已交付</th>
+              <th>結帳日期</th><th>訂單編號</th><th>顧客</th><th>品名</th><th>訂購</th><th>欠貨</th><th>已到貨未取貨</th><th>已取貨</th>
             </tr>
           </thead>
           <tbody>
@@ -189,8 +189,8 @@ function BacklogTable({ rows: raw, all }: { rows: BacklogRow[]; all: boolean }) 
                 <td data-label="品名" className="product-name">{r.full_product_name}</td>
                 <td data-label="訂購">{r.ordered_qty}</td>
                 <td data-label="欠貨"><strong>{r.pending_arrival}</strong></td>
-                <td data-label="已到貨未交付">{r.arrived_pending_notify + r.notified_pending_pickup}</td>
-                <td data-label="已交付">{r.delivered + r.excluded}</td>
+                <td data-label="已到貨未取貨">{r.arrived_pending_notify + r.notified_pending_pickup}</td>
+                <td data-label="已取貨">{r.delivered + r.excluded}</td>
               </tr>
             ))}
           </tbody>
@@ -220,7 +220,7 @@ function groupByProduct(rows: BacklogRow[]): GroupRow[] {
 
 // 下一步操作：每一步不同顏色
 type StepKey = 'arrival' | 'label' | 'notify' | 'deliver';
-const STEP_LABEL: Record<StepKey, string> = { arrival: '登記到貨', label: '已貼', notify: '通知顧客', deliver: '完成交付' };
+const STEP_LABEL: Record<StepKey, string> = { arrival: '登記到貨', label: '已貼', notify: '通知顧客', deliver: '完成取貨' };
 function stepsOf(d: Device): StepKey[] {
   const unlabeled = !d.is_labeled ? ['label' as const] : [];
   if (d.status === 'pending_arrival') return ['arrival'];
@@ -363,7 +363,7 @@ export function OrderProgress({ o }: { o: OrderSummary }) {
     o.pending_arrival && `待到貨 ${o.pending_arrival}`,
     o.arrived_pending_notify && `待通知 ${o.arrived_pending_notify}`,
     o.notified_pending_pickup && `待取貨 ${o.notified_pending_pickup}`,
-    o.delivered && `已交付 ${o.delivered}`,
+    o.delivered && `已取貨 ${o.delivered}`,
     o.excluded && `已取走 ${o.excluded}`,
   ].filter(Boolean);
   return <span className="small">{parts.join('・')}</span>;

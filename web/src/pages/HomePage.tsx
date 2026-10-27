@@ -10,7 +10,7 @@ const TILES = [
   { key: 'arrived_pending_notify', label: '待通知', tab: 'notify' },
   { key: 'pending_label', label: '待貼', tab: 'label' },
   { key: 'notified_pending_pickup', label: '待取貨', tab: 'pickup' },
-  { key: 'delivered', label: '已交付', stat: true },
+  { key: 'delivered', label: '已取貨', stat: true },
 ];
 
 export function HomePage() {

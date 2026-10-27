@@ -150,7 +150,7 @@ export function OrderDetailPage() {
         <div className="table-wrap">
           <table className="list devices">
             <thead>
-              <tr><th>單機</th><th>商品</th><th>SN</th><th>狀態</th><th>已通知</th><th>已貼</th><th>到貨</th><th>交付</th><th>下一步</th><th></th></tr>
+              <tr><th>單機</th><th>商品</th><th>SN</th><th>狀態</th><th>已通知</th><th>已貼</th><th>到貨</th><th>取貨</th><th>下一步</th><th></th></tr>
             </thead>
             <tbody>
               {units.map((dev) => {
@@ -161,7 +161,7 @@ export function OrderDetailPage() {
                       <td data-label="單機">{unitNo.get(dev.id)}</td>
                       <td data-label="商品">
                         <span className="product-name">{it.full_product_name}</span>
-                        {dev.delivery_note && <div className="small muted">交付：{dev.delivery_note}</div>}
+                        {dev.delivery_note && <div className="small muted">取貨：{dev.delivery_note}</div>}
                       </td>
                       <td data-label="SN">
                         {dev.sn ?? <span className="muted">{dev.status === 'pending_arrival' ? '尚未登記' : '無'}</span>}
@@ -181,19 +181,19 @@ export function OrderDetailPage() {
                           : dev.is_labeled ? '是' : '否'}
                       </td>
                       <td data-label="到貨">{fmtDateTime(dev.arrived_at)}</td>
-                      <td data-label="交付">{fmtDateTime(dev.delivered_at)}</td>
+                      <td data-label="取貨">{fmtDateTime(dev.delivered_at)}</td>
                       <td data-label="下一步">
                         {!active ? '—'
                           : dev.status === 'pending_arrival' ? <button className="step step-arrival" onClick={() => setModal({ kind: 'arrival', device: dev, item: it })}>登記到貨</button>
                           : dev.status === 'arrived_pending_notify' ? (
                             <div className="row gap wrap">
                               <button className="step step-notify" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>通知顧客</button>
-                              <button className="step step-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成交付</button>
+                              <button className="step step-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成取貨</button>
                             </div>
                           )
                           : dev.status === 'notified_pending_pickup' ? (
                             <div className="row gap wrap">
-                              <button className="step step-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成交付</button>
+                              <button className="step step-deliver" onClick={() => setModal({ kind: 'deliver', device: dev, item: it })}>完成取貨</button>
                               <button className="link small text-notify" onClick={() => setModal({ kind: 'notify', device: dev, item: it })}>再次通知</button>
                             </div>
                           )
@@ -217,7 +217,7 @@ export function OrderDetailPage() {
           </table>
         </div>
         <ErrorBanner error={opError} />
-        <p className="small muted">「已貼」只有已到貨、尚未交付的機器可以勾選。客人在通知前到店，也可以直接按「完成交付」。</p>
+        <p className="small muted">「已貼」只有已到貨、尚未取貨的機器可以勾選。客人在通知前到店，也可以直接按「完成取貨」。</p>
       </section>
 
       {/* 4. 通知紀錄 */}
@@ -268,7 +268,7 @@ export function OrderDetailPage() {
       {modal?.kind === 'edit_item' && <EditItemDialog item={modal.item} unitCount={unitsOfItem(modal.item.id)} onClose={close} onSaved={reload} />}
       {modal?.kind === 'cancel_order' && (
         <ReasonDialog title="取消整張訂單" danger confirmLabel="確認取消訂單" onClose={close}
-          description={<p>將取消此訂單所有尚未交付的 {o.device_total} 台機器。已交付的機器存在時無法整筆取消。紀錄會保留，不會刪除。</p>}
+          description={<p>將取消此訂單所有尚未取貨的 {o.device_total} 台機器。已取貨的機器存在時無法整筆取消。紀錄會保留，不會刪除。</p>}
           onConfirm={async (reason) => { await rpc('cancel_order', { p_order_id: o.id, p_expected_version: o.version, p_reason: reason }); reload(); }} />
       )}
       {modal?.kind === 'cancel_device' && (
