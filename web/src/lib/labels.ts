@@ -3,8 +3,8 @@ import { ApiError } from './api';
 
 export const STATUS_LABEL: Record<DeviceStatus, string> = {
   pending_arrival: '待到貨',
-  arrived_pending_notify: '已到貨待通知',
-  notified_pending_pickup: '已通知待取貨',
+  arrived_pending_notify: '已到貨',
+  notified_pending_pickup: '已通知',
   delivered: '已取貨',
   excluded: '已取走／不追蹤',
   cancelled: '已取消',

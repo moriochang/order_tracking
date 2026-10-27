@@ -152,7 +152,7 @@ export function NotifyDialog({ device, others, label, order, preselected, onClos
           </label>
         </div>
         <label>備註<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
-        <p className="small muted">有聯繫就算已通知，機器會轉為「已通知待取貨」。</p>
+        <p className="small muted">有聯繫就算已通知，機器會轉為「已通知」。</p>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>

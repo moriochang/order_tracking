@@ -126,8 +126,8 @@
   <p>系統以「每一台機器」為單位追蹤，每台機器會依序經過以下狀態。按鈕、標籤、首頁方塊都使用同一套顏色。</p>
   <div class="flow">
     <div class="step" style="background:var(--c-arrival)"><b>待到貨</b>等貨中</div><div class="arrow">→</div>
-    <div class="step" style="background:var(--c-notify)"><b>已到貨待通知</b>登記到貨、SN</div><div class="arrow">→</div>
-    <div class="step" style="background:var(--c-pickup)"><b>已通知待取貨</b>已聯絡顧客</div><div class="arrow">→</div>
+    <div class="step" style="background:var(--c-notify)"><b>已到貨</b>登記到貨、SN</div><div class="arrow">→</div>
+    <div class="step" style="background:var(--c-pickup)"><b>已通知</b>已聯絡顧客</div><div class="arrow">→</div>
     <div class="step" style="background:var(--c-deliver)"><b>已取貨</b>顧客已領走</div>
   </div>
   <p>「<b>已貼</b>」（紫色）是另外的標記：機器到貨後，在實機上貼標留貨，就把它勾起來。</p>
@@ -152,8 +152,8 @@
     <tr><th style="width:26%">按鈕</th><th>出現時機</th><th>按下後</th></tr>
     <tr><td><span class="btn b-arrival">登記到貨</span></td><td>待到貨</td><td>開啟登記視窗，輸入或拍照辨識 SN</td></tr>
     <tr><td><span class="btn b-label">已貼</span></td><td>已到貨、還沒貼標</td><td>直接標記已貼</td></tr>
-    <tr><td><span class="btn b-notify">通知顧客</span></td><td>已到貨待通知</td><td>記錄通知方式與結果</td></tr>
-    <tr><td><span class="btn b-deliver">完成取貨</span></td><td>已通知待取貨</td><td>確認取貨，可填取貨備註</td></tr>
+    <tr><td><span class="btn b-notify">通知顧客</span></td><td>已到貨</td><td>記錄通知方式與結果</td></tr>
+    <tr><td><span class="btn b-deliver">完成取貨</span></td><td>已通知</td><td>確認取貨，可填取貨備註</td></tr>
   </table>
   <p>品名旁的 <span class="warn">⚠ AC+</span> 這類橘色文字是備註提醒（見第 9 章）。手機上每台機器會顯示成一張小卡片，左側色條代表狀態。</p>
 </section>
@@ -257,7 +257,7 @@
   </div>
   <div class="card">
     <div class="title"><span class="num">3</span>通知顧客</div>
-    <p>聯絡顧客後按 <span class="btn b-notify">通知顧客</span>，選擇方式（電話、簡訊、通訊軟體…）與結果。<b>有聯繫就算已通知</b>，狀態會變成「已通知待取貨」。同一張單其他已到貨的機器可以勾選一起記錄。</p>
+    <p>聯絡顧客後按 <span class="btn b-notify">通知顧客</span>，選擇方式（電話、簡訊、通訊軟體…）與結果。<b>有聯繫就算已通知</b>，狀態會變成「已通知」。同一張單其他已到貨的機器可以勾選一起記錄。</p>
   </div>
   <div class="tip">貨到了：到待辦清單的「待到貨」分頁，在篩選欄輸入型號，從最上面依序登記，就是先訂先給的順序。通知顧客後，這台機器會出現在「待取貨」分頁，等顧客來取。</div>
 </section>
@@ -289,7 +289,7 @@
     <tr><td>還沒通知，顧客就到店</td><td>一樣按 <span class="btn b-deliver">完成取貨</span>，系統會自動補記一筆「顧客到店」通知。</td></tr>
     <tr><td>還沒登記到貨</td><td>先按 <span class="btn b-arrival">登記到貨</span> 輸入 SN，再完成取貨。</td></tr>
     <tr><td>寄送</td><td>寄出後按「完成取貨」，在取貨備註輸入<b>黑貓單號</b>（收件資料寫在訂單備註）。</td></tr>
-    <tr><td>按錯完成取貨</td><td>在該台按「更正狀態」退回「已通知待取貨」，填寫原因。</td></tr>
+    <tr><td>按錯完成取貨</td><td>在該台按「更正狀態」退回「已通知」，填寫原因。</td></tr>
   </table>
 </section>
 
@@ -306,7 +306,7 @@
     <tr><td>異動紀錄</td><td>誰、什麼時候、改了什麼、原因。可依類別篩選</td></tr>
   </table>
   <h3>更正狀態（按錯時使用）</h3>
-  <p>按「<b>更正狀態</b>」可以退回一格，例如「已取貨 → 已通知待取貨」、「已到貨待通知 → 待到貨」（會清除 SN 與已貼）。必須填寫原因，紀錄會保留。</p>
+  <p>按「<b>更正狀態</b>」可以退回一格，例如「已取貨 → 已通知」、「已到貨 → 待到貨」（會清除 SN 與已貼）。必須填寫原因，紀錄會保留。</p>
   <div class="note">所有修改、取消、更正都會在異動紀錄留下操作人與時間，紀錄不能修改或刪除。操作人名字以綠底白字顯示。</div>
 </section>
 
