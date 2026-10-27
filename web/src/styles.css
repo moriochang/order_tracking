@@ -11,7 +11,7 @@
   --danger-bg: #fdecea;
   --info-bg: #eaf2fd;
   --warn-bg: #fff6e0;
-  --operator-bg: #248a3d;   /* 操作人姓名：綠底白字 */
+  --operator-bg: #248a3d;   /* 操作人姓名：預設綠底白字，實際顏色依人員（ui.tsx Operator） */
   --radius: 18px;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   color: var(--text);

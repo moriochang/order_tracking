@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DeviceStatus } from '../lib/types';
 import { STATUS_LABEL, errorMessage } from '../lib/labels';
-import { ApiError } from '../lib/api';
+import { ApiError, listProfiles } from '../lib/api';
 
 export function StatusBadge({ status }: { status: DeviceStatus }) {
   return <span className={`badge st-${status}`}>{STATUS_LABEL[status]}</span>;
@@ -100,4 +100,33 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick]);
   return { data, error, loading, reload: () => setTick((t) => t + 1) };
+}
+
+// 操作人姓名：每個人一個顏色，在異動紀錄中容易分辨。
+// 依帳號建立順序分配色票（看得到的帳號各不相同）；清單裡沒有的名字（例如資料庫帳號）依名字計算。
+// 色票都是深色，白字對比足夠；人數超過色票數時才會重複。
+const OPERATOR_COLORS = [
+  '#248a3d', '#0071e3', '#8944ab', '#c93400', '#b0247a', '#0e7c86',
+  '#5e5ce6', '#8a5a00', '#d70015', '#00704a', '#3a5a8c', '#6e6e00',
+];
+const OperatorColors = createContext<Map<string, string>>(new Map());
+
+export function OperatorColorsProvider({ children }: { children: ReactNode }) {
+  const profiles = useAsync(listProfiles, []);
+  const colors = useMemo(() => new Map([...(profiles.data ?? [])]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.email.localeCompare(b.email))
+    .map((p, i) => [p.display_name, OPERATOR_COLORS[i % OPERATOR_COLORS.length]])), [profiles.data]);
+  return <OperatorColors.Provider value={colors}>{children}</OperatorColors.Provider>;
+}
+
+function hashColor(name: string) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+  return OPERATOR_COLORS[h % OPERATOR_COLORS.length];
+}
+
+export function Operator({ name }: { name: string | null | undefined }) {
+  const colors = useContext(OperatorColors);
+  if (!name) return null;
+  return <span className="operator" style={{ background: colors.get(name) ?? hashColor(name) }}>{name}</span>;
 }

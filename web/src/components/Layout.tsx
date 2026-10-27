@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth, useMe } from '../auth/AuthProvider';
 import { ROLE_LABEL, canEdit } from '../lib/labels';
+import { OperatorColorsProvider } from './ui';
 
 export function Layout() {
   const me = useMe();
@@ -24,7 +25,9 @@ export function Layout() {
         </div>
       </header>
       <main>
-        <Outlet />
+        <OperatorColorsProvider>
+          <Outlet />
+        </OperatorColorsProvider>
       </main>
     </div>
   );

@@ -5,7 +5,7 @@ import { fmtDate, fmtDateTime } from '../lib/format';
 import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL, canEdit } from '../lib/labels';
 import { useMe } from '../auth/AuthProvider';
 import type { Device, OrderItem } from '../lib/types';
-import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
+import { ErrorBanner, Operator, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
 import { AuditTimeline } from '../components/AuditTimeline';
 import { EditItemDialog, EditOrderDialog } from '../components/OrderDialogs';
 import { unitNumbers } from '../lib/units';
@@ -70,7 +70,7 @@ export function OrderDetailPage() {
       <div className="row between wrap">
         <div>
           <h1>{o.order_no}</h1>
-          <div className="muted small">{o.store_code}・建立於 {fmtDateTime(o.created_at)}・<span className="operator">{names.get(o.created_by) ?? ''}</span></div>
+          <div className="muted small">{o.store_code}・建立於 {fmtDateTime(o.created_at)}・<Operator name={names.get(o.created_by)} /></div>
         </div>
         <div className="row gap">
           <span className={`badge order-${o.order_status}`}>{ORDER_STATUS_LABEL[o.order_status]}</span>
@@ -232,7 +232,7 @@ export function OrderDetailPage() {
               const dev = d.devices.find((x) => x.id === n.device_id);
               return (
                 <li key={n.id}>
-                  {fmtDateTime(n.notified_at)}・<span className="operator">{names.get(n.operator_id)}</span>・{METHOD_LABEL[n.method] ?? n.method}・{OUTCOME_LABEL[n.outcome] ?? n.outcome}
+                  {fmtDateTime(n.notified_at)}・<Operator name={names.get(n.operator_id)} />・{METHOD_LABEL[n.method] ?? n.method}・{OUTCOME_LABEL[n.outcome] ?? n.outcome}
                   {dev && <span className="small muted">・{unitName(dev)}</span>}
                   {n.note ? `・${n.note}` : ''}
                 </li>
