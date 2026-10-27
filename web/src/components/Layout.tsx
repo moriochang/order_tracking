@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth, useMe } from '../auth/AuthProvider';
-import { ROLE_LABEL } from '../lib/labels';
+import { ROLE_LABEL, canEdit } from '../lib/labels';
 
 export function Layout() {
   const me = useMe();
@@ -11,7 +11,7 @@ export function Layout() {
         <div className="brand">預購追蹤</div>
         <nav>
           <NavLink to="/" end>首頁</NavLink>
-          <NavLink to="/orders/new">新增訂單</NavLink>
+          {canEdit(me.role) && <NavLink to="/orders/new">新增訂單</NavLink>}
           <NavLink to="/orders" end>訂單查詢</NavLink>
           <NavLink to="/todo">待辦清單</NavLink>
           <NavLink to="/help">操作教學</NavLink>

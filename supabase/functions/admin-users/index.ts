@@ -13,7 +13,7 @@ type ServiceAccount = { project_id: string; client_email: string; private_key: s
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-const ROLES = ['staff', 'manager', 'admin'];
+const ROLES = ['viewer', 'staff', 'manager', 'admin'];
 
 class HttpError extends Error {
   constructor(public status: number, public code: string, public detail = '') {

@@ -4,7 +4,7 @@ import { useMe } from '../auth/AuthProvider';
 import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders, type SearchField } from '../lib/api';
 import { fmtDate, todayTaipei } from '../lib/format';
 import { exportCsv, exportXlsx } from '../lib/exportOrders';
-import { ORDER_STATUS_LABEL } from '../lib/labels';
+import { ORDER_STATUS_LABEL, canEdit, canExport } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
 import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf, type OrderRef } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
@@ -51,10 +51,10 @@ function sinceOf(period: string): string | undefined {
   return undefined;
 }
 
-// 匯出：只有主管、管理者可用；每次匯出先寫入紀錄（含查詢條件）
+// 匯出：門市檢視、主管、管理者可用（門市同仁不行）；每次匯出先寫入紀錄（含查詢條件）
 function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Record<string, string> }) {
   const me = useMe();
-  const canExport = me.role === 'manager' || me.role === 'admin';
+  const allowed = canExport(me.role);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const log = (format: 'xlsx' | 'csv', rows: number) =>
@@ -67,7 +67,7 @@ function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Recor
     <div className="stack tight">
       <div className="row between wrap">
         <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示最近 100 筆，請縮小條件）' : ''}</span>
-        {canExport && <div className="row gap">
+        {allowed && <div className="row gap">
           <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportXlsx)}>
             {busy ? '匯出中…' : '匯出 Excel'}
           </button>
@@ -233,6 +233,8 @@ function stepsOf(d: Device): StepKey[] {
 type UnitLine = { device: Device; name: string; note: string };
 
 export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onChanged?: () => void }) {
+  const editable = canEdit(useMe().role);
+  const steps = (d: Device) => (editable ? stepsOf(d) : []);
   const ids = orders.map((o) => o.id);
   const items = useAsync(() => itemsForOrders(ids), [ids.join(',')]);
   const devices = useAsync(() => devicesForOrders(ids), [ids.join(',')]);
@@ -272,7 +274,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
         <thead>
           <tr>
             <th>訂單編號</th><th>顧客</th><th>電話</th><th>結帳日期</th><th>機號</th><th>序號</th><th>預結號碼</th>
-            <th>商品明細</th><th>數量</th><th>狀態</th><th>操作</th><th>備註</th>
+            <th>商品明細</th><th>數量</th><th>狀態</th>{editable && <th>操作</th>}<th>備註</th>
           </tr>
         </thead>
         <tbody>
@@ -300,7 +302,7 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                           {l.note && <div className="device-note block">⚠ {l.note}</div>}
                           <div className="row gap wrap">
                             <StatusBadge status={l.device.status} />
-                            {stepsOf(l.device).map((step) => (
+                            {steps(l.device).map((step) => (
                               <button key={step} type="button" className={`step step-${step}`}
                                 onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name, phone: o.customer_phone })}>
                                 {STEP_LABEL[step]}
@@ -322,14 +324,14 @@ export function OrderTable({ orders, onChanged }: { orders: OrderSummary[]; onCh
                 <td data-label="狀態" className="desk-only">
                   {o.order_status === 'cancelled' ? <span>{ORDER_STATUS_LABEL.cancelled}</span> : cell((l) => <StatusBadge status={l.device.status} />)}
                 </td>
-                <td data-label="操作" className="desk-only">
-                  {cell((l) => stepsOf(l.device).map((step) => (
+                {editable && <td data-label="操作" className="desk-only">
+                  {cell((l) => steps(l.device).map((step) => (
                     <button key={step} type="button" className={`step step-${step}`}
                       onClick={() => start(step, l.device, `${l.name}${l.device.sn ? `（${l.device.sn}）` : ''}`, l.note, { no: o.order_no, customer: o.customer_name, phone: o.customer_phone })}>
                       {STEP_LABEL[step]}
                     </button>
                   )))}
-                </td>
+                </td>}
                 <td data-label="備註" className={`clip ${o.order_note ? '' : 'desk-only'}`}>{o.order_note ?? ''}</td>
               </tr>
             );

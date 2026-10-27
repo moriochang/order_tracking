@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
+import { canEdit } from '../lib/labels';
 import { searchOrders, todoCounts } from '../lib/api';
 import { ErrorBanner, useAsync } from '../components/ui';
 import { OrderTable } from './OrdersPage';
@@ -50,7 +51,7 @@ export function HomePage() {
       <section className="stack">
         <div className="row between">
           <h2>最近建立的訂單</h2>
-          <Link to="/orders/new" className="button">＋ 新增訂單</Link>
+          {canEdit(me.role) && <Link to="/orders/new" className="button">＋ 新增訂單</Link>}
         </div>
         <ErrorBanner error={recent.error} />
         {recent.data && <OrderTable orders={recent.data} onChanged={counts.reload} />}

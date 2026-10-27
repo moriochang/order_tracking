@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { listProfiles, loadOrder, rpc } from '../lib/api';
 import { fmtDate, fmtDateTime } from '../lib/format';
-import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL } from '../lib/labels';
+import { METHOD_LABEL, ORDER_STATUS_LABEL, OUTCOME_LABEL, STATUS_LABEL, canEdit } from '../lib/labels';
+import { useMe } from '../auth/AuthProvider';
 import type { Device, OrderItem } from '../lib/types';
 import { ErrorBanner, ReasonDialog, StatusBadge, useAsync } from '../components/ui';
 import { AuditTimeline } from '../components/AuditTimeline';
@@ -27,6 +28,7 @@ const CORRECT_TO: Partial<Record<Device['status'], Device['status']>> = {
 };
 
 export function OrderDetailPage() {
+  const me = useMe();
   const { orderId = '' } = useParams();
   const data = useAsync(() => loadOrder(orderId), [orderId]);
   const profiles = useAsync(listProfiles, []);
@@ -41,7 +43,8 @@ export function OrderDetailPage() {
   if (!d?.summary) return <div className="card">找不到這張訂單，或你沒有查看權限。<Link to="/orders">回訂單查詢</Link></div>;
 
   const o = d.summary;
-  const active = o.order_status !== 'cancelled';
+  // 可操作：訂單未取消，且不是門市檢視帳號
+  const active = o.order_status !== 'cancelled' && canEdit(me.role);
   const close = () => setModal(null);
   const reload = data.reload;
   const itemById = new Map(d.items.map((i) => [i.id, i]));

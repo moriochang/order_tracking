@@ -12,6 +12,7 @@ import { OrderDetailPage } from './pages/OrderDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TodoPage } from './pages/TodoPage';
 import { HelpPage } from './pages/HelpPage';
+import { canEdit } from './lib/labels';
 import './styles.css';
 
 function Gate() {
@@ -49,7 +50,7 @@ function Gate() {
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="orders" element={<OrdersPage />} />
-        <Route path="orders/new" element={<NewOrderPage />} />
+        <Route path="orders/new" element={canEdit(state.me.role) ? <NewOrderPage /> : <Navigate to="/" />} />
         <Route path="orders/:orderId" element={<OrderDetailPage />} />
         <Route path="todo" element={<TodoPage />} />
         <Route path="help" element={<HelpPage />} />

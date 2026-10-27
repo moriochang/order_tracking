@@ -19,7 +19,10 @@ export const OUTCOME_LABEL: Record<string, string> = {
 
 export const ORDER_STATUS_LABEL = { in_progress: '進行中', completed: '已完成', cancelled: '已取消' } as const;
 
-export const ROLE_LABEL: Record<Role, string> = { staff: '門市同仁', manager: '門市主管', admin: '總部管理者' };
+export const ROLE_LABEL: Record<Role, string> = { viewer: '門市檢視', staff: '門市同仁', manager: '門市主管', admin: '總部管理者' };
+// 門市檢視只能看與匯出，不能做任何修改（資料庫也會拒絕）
+export const canEdit = (role: Role) => role !== 'viewer';
+export const canExport = (role: Role) => role !== 'staff';
 
 export const ACTION_LABEL: Record<string, string> = {
   create_order: '建立訂單',

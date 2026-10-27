@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
 import { listTodo, rpc } from '../lib/api';
 import { fmtDate, todayTaipei } from '../lib/format';
+import { canEdit } from '../lib/labels';
 import type { Device, TodoRow } from '../lib/types';
 import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
@@ -49,6 +50,7 @@ const toDevice = (r: TodoRow) => ({
 
 export function TodoPage() {
   const me = useMe();
+  const editable = canEdit(me.role);
   const [params, setParams] = useSearchParams();
   const tab = (params.get('tab') ?? 'all') as TabKey;
   const store = params.get('store') ?? '';
@@ -112,7 +114,7 @@ export function TodoPage() {
             <thead>
               <tr>
                 <th>{tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'}</th><th>等待時間</th>
-                <th>訂單編號</th><th>顧客</th><th>電話</th><th>品名</th><th>SN</th><th>狀態</th><th>操作</th>
+                <th>訂單編號</th><th>顧客</th><th>電話</th><th>品名</th><th>SN</th><th>狀態</th>{editable && <th>操作</th>}
               </tr>
             </thead>
             <tbody>
@@ -133,7 +135,7 @@ export function TodoPage() {
                       {notesOf(r.item_note, r.note) && <div className="device-note block">⚠ {notesOf(r.item_note, r.note)}</div>}</td>
                     <td data-label="SN">{r.sn ?? '—'}</td>
                     <td data-label="狀態"><StatusBadge status={r.status} /></td>
-                    <td data-label="操作">
+                    {editable && <td data-label="操作">
                       <div className="row gap">
                         {(tab === 'arrival' || (tab === 'all' && r.status === 'pending_arrival')) && (
                           <button type="button" className="step step-arrival" onClick={() => setAction({ kind: 'arrival', row: r })}>登記到貨</button>
@@ -148,7 +150,7 @@ export function TodoPage() {
                           <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成取貨</button>
                         )}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 );
               })}

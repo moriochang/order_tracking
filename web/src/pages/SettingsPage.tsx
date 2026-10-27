@@ -415,7 +415,7 @@ function BatchCreateDialog({ stores, existing, onClose, onSaved }: {
         </label>
         <label>角色
           <select value={role} disabled={busy || done} onChange={(e) => setRole(e.target.value as Role)}>
-            {(['staff', 'manager', 'admin'] as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
           </select>
         </label>
         {role !== 'admin' && <StorePicker stores={stores} value={storeCodes} onChange={setStoreCodes} />}

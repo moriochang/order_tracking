@@ -1,4 +1,4 @@
-export type Role = 'staff' | 'manager' | 'admin';
+export type Role = 'viewer' | 'staff' | 'manager' | 'admin';
 
 export type DeviceStatus =
   | 'pending_arrival'
