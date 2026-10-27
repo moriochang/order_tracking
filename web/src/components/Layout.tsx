@@ -14,6 +14,7 @@ export function Layout() {
           <NavLink to="/orders/new">新增訂單</NavLink>
           <NavLink to="/orders" end>訂單查詢</NavLink>
           <NavLink to="/todo">待辦清單</NavLink>
+          <NavLink to="/help">操作教學</NavLink>
           {me.role === 'admin' && <NavLink to="/settings">設定</NavLink>}
         </nav>
         <div className="who">

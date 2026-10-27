@@ -306,3 +306,16 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 .delivery-pick input { margin-top: 5px; }
 .dialog-order { background: var(--bg); border-radius: 10px; padding: 6px 12px; font-size: 0.9rem; color: var(--muted); }
 .dialog-order b { color: var(--text); font-weight: 600; }
+
+/* 操作教學 */
+.help-toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; }
+.help-toc a { padding: 6px 0; border-bottom: 1px dotted var(--border); text-decoration: none; }
+.help-sub { font-weight: 600; color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+.manual { font-size: 0.95rem; min-width: 0; overflow-x: auto; scroll-margin-top: 80px; }
+@media (max-width: 640px) {
+  .manual .m-flow, .manual .m-tiles { flex-wrap: wrap; }
+  .manual .m-flow .m-step, .manual .m-tiles > div { flex: 1 1 40%; }
+  .manual .m-flow .m-arrow { display: none; }
+}
+.manual section { break-before: auto; }
+.manual mark { background: #ffe58f; color: inherit; border-radius: 3px; padding: 0 1px; }

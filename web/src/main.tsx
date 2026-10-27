@@ -11,6 +11,7 @@ import { OrdersPage } from './pages/OrdersPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TodoPage } from './pages/TodoPage';
+import { HelpPage } from './pages/HelpPage';
 import './styles.css';
 
 function Gate() {
@@ -51,6 +52,7 @@ function Gate() {
         <Route path="orders/new" element={<NewOrderPage />} />
         <Route path="orders/:orderId" element={<OrderDetailPage />} />
         <Route path="todo" element={<TodoPage />} />
+        <Route path="help" element={<HelpPage />} />
         <Route path="settings" element={state.me.role === 'admin' ? <SettingsPage /> : <Navigate to="/" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
