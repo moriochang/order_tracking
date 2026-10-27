@@ -97,7 +97,7 @@ test('T14 收銀機號＋序號＋日期相同時，需填寫確認原因才可�
   const db = await freshDb(); t.after(() => db.close());
   const first = await createOrder(db, 'staffA', { register_no: '011', receipt_seq: '196' });
 
-  const dups = await as(db, 'staffA', `select * from check_duplicate_order('A01', null, '011', '196', '2026-10-20')`);
+  const dups = await as(db, 'staffA', `select * from check_duplicate_order('A01', null, '011', '196', $1)`, [first.payload.purchase_date]);
   assert.deepEqual(dups.map((d) => [d.order_no, d.match_type]), [[first.order_no, 'register_seq_date']]);
 
   const msg = await expectError(createOrder(db, 'staffA', { register_no: '011', receipt_seq: '196' }));

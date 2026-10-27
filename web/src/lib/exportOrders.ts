@@ -60,7 +60,9 @@ export async function exportXlsx(orders: OrderSummary[], log: Logger) {
 export async function exportCsv(orders: OrderSummary[], log: Logger) {
   const rows = await buildRows(orders);
   await log('csv', rows.length - 1);
-  const esc = (v: string) => (/[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  // 以 = + - @ 開頭的儲存格前加 '，避免 Excel 當成公式執行（CSV 公式注入）
+  const safe = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v);
+  const esc = (v: string) => { const s = safe(v); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const text = '﻿' + rows.map((r) => r.map(esc).join(',')).join('\r\n');
   download(new Blob([text], { type: 'text/csv;charset=utf-8' }), fileName('csv'));
 }

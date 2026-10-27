@@ -127,6 +127,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   AUTH_ACCOUNT_EXISTS: '此登入帳號已開通。',
   CANNOT_MODIFY_SELF: '不能變更自己的角色或停用自己。',
   DOMAIN_NOT_ALLOWED: '只能開通公司網域的 Email。',
+  PURCHASE_DATE_LOCKED: '結帳日期固定為建單當天，不能修改。',
   EXTERNAL_ROLE_NOT_ALLOWED: '外部帳號（個人 Google 帳號）只能設為門市同仁或門市檢視。',
   INVALID_BARCODE: '國際條碼格式或檢查碼不正確，請核對條碼數字。',
   SERVER_NOT_CONFIGURED: '伺服器尚未設定 Firebase 服務帳戶，請聯絡系統管理者。',

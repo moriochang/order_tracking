@@ -117,7 +117,7 @@ export function orderPayload(overrides = {}) {
     store_code: 'A01',
     customer_name: '張顧客',
     customer_phone: '0912-345-678',
-    purchase_date: '2026-10-20',
+    purchase_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()),   // 結帳日期固定為當天
     register_no: '011',
     receipt_seq: String(Math.floor(Math.random() * 1e6)).padStart(3, '0'),
     receipt_no: null,

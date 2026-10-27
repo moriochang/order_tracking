@@ -145,6 +145,8 @@ Deno.serve(async (req) => {
     if (!callerToken) throw new HttpError(401, 'UNAUTHENTICATED');
     const me = await rpc(callerToken, 'get_me', {});
     if (!me) throw new HttpError(401, 'UNAUTHENTICATED');
+    // 門市檢視只能看與匯出，不需要拍照辨識（避免辨識費用被濫用）
+    if (me.role === 'viewer') throw new HttpError(403, 'FORBIDDEN');
 
     const body = await req.json().catch(() => null);
     const image = typeof body?.image === 'string' ? body.image.replace(/^data:image\/\w+;base64,/, '') : '';
