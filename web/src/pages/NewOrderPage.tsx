@@ -26,8 +26,6 @@ function headerProblems(h: Header): string[] {
   if (!h.store_code) p.push('請選擇門市');
   if (!h.customer_name.trim()) p.push('請填寫顧客姓名');
   if (!/^\+?[0-9#]{6,20}$/.test(h.customer_phone.replace(/[\s()-]/g, ''))) p.push('請填寫正確的聯絡電話');
-  if (!h.purchase_date) p.push('請填寫結帳日期');
-  if (h.purchase_date > todayTaipei()) p.push('結帳日期不能是未來日期');
   if (!/^[0-9A-Za-z]{1,10}$/.test(h.register_no.trim())) p.push('請填寫收銀機號（英數字）');
   if (!/^[0-9A-Za-z]{1,20}$/.test(h.receipt_seq.trim())) p.push('請填寫序號（英數字）');
   return p;
@@ -88,7 +86,6 @@ export function NewOrderPage() {
     const p = r.parsed;
     setH((prev) => ({
       ...prev,
-      purchase_date: p.purchase_date && p.purchase_date <= todayTaipei() ? p.purchase_date : prev.purchase_date,
       register_no: p.register_no || prev.register_no,
       receipt_seq: p.receipt_seq || prev.receipt_seq,
       receipt_no: p.receipt_no || prev.receipt_no,
@@ -123,7 +120,7 @@ export function NewOrderPage() {
         p_receipt_no: h.receipt_no.trim() || null,
         p_register_no: h.register_no.trim(),
         p_receipt_seq: h.receipt_seq.trim(),
-        p_purchase_date: h.purchase_date,
+        p_purchase_date: todayTaipei(),   // 固定為建單當天
       });
       if (found.length) setDups(found);
       else setConfirming(true);
@@ -144,7 +141,7 @@ export function NewOrderPage() {
           store_code: h.store_code,
           customer_name: h.customer_name.trim(),
           customer_phone: h.customer_phone,
-          purchase_date: h.purchase_date,
+          purchase_date: todayTaipei(),
           register_no: h.register_no.trim(),
           receipt_seq: h.receipt_seq.trim(),
           receipt_no: h.receipt_no.trim() || null,
@@ -188,7 +185,7 @@ export function NewOrderPage() {
             <div className="grid2">
               <label>顧客姓名（必填）<input value={h.customer_name} onChange={(e) => set({ customer_name: e.target.value })} /></label>
               <label>聯絡電話（必填）<input type="tel" inputMode="tel" value={h.customer_phone} onChange={(e) => set({ customer_phone: e.target.value })} /></label>
-              <label>結帳／預購日期（必填）<input type="date" max={todayTaipei()} value={h.purchase_date} onChange={(e) => set({ purchase_date: e.target.value })} /></label>
+              <label>結帳／預購日期<input value={fmtDate(h.purchase_date)} readOnly disabled /></label>
               <label>
                 門市（必填）
                 <select value={h.store_code} onChange={(e) => set({ store_code: e.target.value })} disabled={me.stores.length === 1}>
@@ -196,9 +193,9 @@ export function NewOrderPage() {
                   {me.stores.map((s) => <option key={s.code} value={s.code}>{s.code} {s.name}</option>)}
                 </select>
               </label>
-              <label>收銀機號（必填）<input inputMode="numeric" placeholder="例：011" value={h.register_no} onChange={(e) => set({ register_no: e.target.value })} /></label>
-              <label>序號（必填）<input inputMode="numeric" placeholder="例：196" value={h.receipt_seq} onChange={(e) => set({ receipt_seq: e.target.value })} /></label>
-              <label>預結號碼<input value={h.receipt_no} onChange={(e) => set({ receipt_no: e.target.value })} /></label>
+              <label>收銀機號（必填）<input inputMode="numeric" pattern="[0-9]*" placeholder="例：011" value={h.register_no} onChange={(e) => set({ register_no: e.target.value })} /></label>
+              <label>序號（必填）<input inputMode="numeric" pattern="[0-9]*" placeholder="例：196" value={h.receipt_seq} onChange={(e) => set({ receipt_seq: e.target.value })} /></label>
+              <label>預結號碼<input inputMode="numeric" pattern="[0-9]*" value={h.receipt_no} onChange={(e) => set({ receipt_no: e.target.value })} /></label>
             </div>
             <label>訂單備註<textarea rows={2} value={h.order_note} onChange={(e) => set({ order_note: e.target.value })} /></label>
             <p className="small muted">需要寄送請寫在這裡（收件人、電話、地址）；寄出後請在「完成交付」的交付備註輸入黑貓單號。</p>

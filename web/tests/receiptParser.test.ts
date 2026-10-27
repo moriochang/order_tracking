@@ -44,25 +44,21 @@ MBN 13 8G 256GB 銀 MHFA4 0點
 2026/10/01 19:57:38 9999 011 00102
 *07501100102*`;
 
-test('iPad 單：單據欄位、重複列印依型號合併', () => {
+test('iPad 單：單據欄位；數量一律 1 台，同一型號分多行時依行數合併', () => {
   const r = parseReceiptText(IPAD);
-  assert.deepEqual(
-    [r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq],
-    ['75000001', '2026-09-24', '011', '101'],
-  );
+  assert.deepEqual([r.receipt_no, r.register_no, r.receipt_seq], ['75000001', '011', '101']);
   assert.deepEqual(r.items.map((i) => [i.model, i.qty, i.merged_lines]), [
     ['MH314', 3, 3], ['MH334', 3, 3], ['MH344', 3, 3],
   ]);
   assert.deepEqual(r.warnings, []);
 });
 
-test('MacBook 單：負數量行不加入並提示', () => {
+test('MacBook 單：單據上的數量（7）不採用，預設 1 台；負數量的作廢行不加入並提示', () => {
   const r = parseReceiptText(MBN);
   assert.equal(r.receipt_no, '75000002');
-  assert.equal(r.receipt_seq, '102');
-  assert.deepEqual(r.items.map((i) => [i.model, i.qty]), [['MHFH4', 7], ['MHFA4', 7]]);
+  assert.deepEqual(r.items.map((i) => [i.model, i.qty]), [['MHFH4', 1], ['MHFA4', 1]]);
   assert.equal(r.warnings.length, 1);
-  assert.match(r.warnings[0], /-6/);
+  assert.match(r.warnings[0], /作廢/);
 });
 
 // 依實際單據（IMG_5825–5827）改寫，只要型號與數量；條碼、內部代碼、金額與消費金額以下都不取
@@ -89,13 +85,13 @@ UCARD 94,800
 實體店面無七天鑑賞期。
 2.致電 0800-095-988 或 02-2558-0806`;
 
-test('實際單據：只取型號與數量（國際條碼、7 碼代碼、售價都忽略）', () => {
+test('實際單據：只取型號，數量 1 台（國際條碼、7 碼代碼、售價都忽略）', () => {
   const iphone = parseReceiptText(REAL('2026/10/03', '011', '240', [
     'APPLE', 'iPhone 18 Pro 256 黑 MJRP4 0點', '195951419343 1 44,900 44,900TX',
     'APPLE', 'iPhone 18 Pro Max 256 黑 MJXN4 0點', '195951413709 1 49,900 49,900TX',
   ]));
   assert.deepEqual(iphone.items.map((i) => [i.model, i.qty, i.notes]), [['MJRP4', 1, []], ['MJXN4', 1, []]]);
-  assert.deepEqual([iphone.purchase_date, iphone.register_no, iphone.receipt_seq], ['2026-10-03', '011', '240']);
+  assert.deepEqual([iphone.register_no, iphone.receipt_seq], ['011', '240']);
 
   const ipad = parseReceiptText(REAL('2026/10/04', '011', '257', [
     'APPLE', 'iPad Air 11 WF 256 灰 MH354 0點', '1389583 1 28,400 28,400TX',
@@ -111,22 +107,10 @@ test('實際單據：只取型號與數量（國際條碼、7 碼代碼、售價
   assert.deepEqual(imac.warnings, []);
 });
 
-test('數量認錯時用單價、金額攔下', () => {
-  const r = parseReceiptText(MBN.replace('1000002 7 22,900', '1000002 1 22,900'));   // 數量 7 認成 1
-  assert.ok(r.items[1].notes.some((n) => /數量 1 可能辨識錯誤/.test(n)));
-});
-
-test('千分位被拆開時數量仍正確、不誤報', () => {
-  const r = parseReceiptText(MBN
-    .replace('1000001 7 22,900 160,300TX', '1000001 7 22, 900 160 ,300TX')
-    .replace('1000002 7 22,900 160,300TX', '1000002 7 22,900 160, 300 TX'));
-  assert.deepEqual(r.items.map((i) => [i.qty, i.notes]), [[7, []], [7, []]]);
-});
-
 test('空白或無關文字：不捏造欄位', () => {
   const r = parseReceiptText('hello\nworld');
   assert.deepEqual([r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq, r.items.length], ['', '', '', '', 0]);
-  assert.ok(r.warnings.length >= 5);
+  assert.ok(r.warnings.length >= 4);
 });
 
 test('「消費金額」沒辨識到時，以下的金額、底部條碼、注意事項也不會被當成商品', () => {

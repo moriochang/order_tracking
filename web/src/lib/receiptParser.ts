@@ -1,6 +1,6 @@
 // 預購明細文字解析：輸入 Vision 辨識出的單據文字，依 POS 單據格式拆成欄位。
-// 只取「預購明細 Pre-Sale」到「消費金額」之間：上方的預結號碼、銷售日期、機號、序號，與每項商品的型號、數量。
-// 國際條碼／內部代碼、金額、消費金額以下的資訊都不需要（決策 2026-10-27）；單價與金額只拿來核對數量有沒有認錯。
+// 只取「預購明細 Pre-Sale」到「消費金額」之間：上方的預結號碼、機號、序號，與每項商品的型號（數量預設 1 台）。
+// 國際條碼／內部代碼、數量、金額、消費金額以下的資訊都不需要（決策 2026-10-27）。
 // 解析結果只是草稿，必須由同仁核對後才會建立訂單。
 
 export type ParsedItem = {
@@ -21,7 +21,6 @@ export type ParsedReceipt = {
   warnings: string[];
 };
 
-const num = (s: string) => Number(s.replace(/,/g, ''));
 const pad2 = (s: string) => s.padStart(2, '0');
 
 function toDate(y: string, m: string, d: string) {
@@ -41,12 +40,6 @@ function normalize(text: string) {
 const RE_CODE_LINE = /^(\d{7,14})(?:\s+(.*))?$/;
 const RE_DIVIDER = /^[-=_ ]{4,}$/;
 const RE_BRAND = /^[A-Z][A-Z&.\- ]{1,20}$/;
-
-// OCR 常把千分位拆開（「44, 900」「44 ,900」），先接回去再取數字
-function parseNumbers(rest: string) {
-  const joined = rest.replace(/(\d)\s*,\s*(?=\d{3}(?!\d))/g, '$1,');
-  return (joined.match(/-?[\d,]*\d/g) ?? []).map(num);
-}
 
 // 只取單據的明細區塊：「預購明細 Pre-Sale」到「消費金額」為止。
 // 上方公司名稱、消費金額以下（金額、卡號、底部條碼、注意事項）都不解析。
@@ -85,7 +78,7 @@ export function parseReceiptText(text: string): ParsedReceipt {
   const seq = joined.match(/序號\s*[:：]?\s*([0-9A-Za-z]+)/);
   if (seq) out.receipt_seq = seq[1];
 
-  for (const [key, label] of [['receipt_no', '預結號碼'], ['purchase_date', '銷售日期'], ['register_no', '機號'], ['receipt_seq', '序號']] as const) {
+  for (const [key, label] of [['receipt_no', '預結號碼'], ['register_no', '機號'], ['receipt_seq', '序號']] as const) {
     if (!out[key]) out.warnings.push(`找不到「${label}」，請手動填寫`);
   }
 
@@ -97,6 +90,11 @@ export function parseReceiptText(text: string): ParsedReceipt {
   region.forEach((line, i) => {
     const m = line.match(RE_CODE_LINE);
     if (!m) return;
+    // 負數量是作廢行（或背面透字），不加入，只提示
+    if (/(^|\s)-\d/.test(m[2] ?? '')) {
+      out.warnings.push(`有一行數量為負（${m[1]}），可能是作廢或背面透字，未加入`);
+      return;
+    }
     // 品名：代碼行之前最近的一行（跳過分隔線與品牌行）
     let name = '';
     for (let j = i - 1; j >= 0; j--) {
@@ -106,16 +104,9 @@ export function parseReceiptText(text: string): ParsedReceipt {
       name = prev.replace(/\s*-?\d+\s*點\s*$/, '').trim();
       break;
     }
-    // 代碼後面依序是數量、單價、金額；只要數量，單價與金額用來核對數量
-    const nums = parseNumbers((m[2] ?? '').replace(/TX$/i, ''));
+    // 數量一律預設 1 台（決策 2026-10-27），同仁依單據調整；同一型號分成多行時合併加總
     const notes: string[] = [];
-    let qty: number | null = null;
-    if (nums.length >= 3) {
-      const [q, price, amount] = nums.slice(-3);
-      qty = q;
-      if (q * price !== amount) notes.push(`數量 ${q} 可能辨識錯誤（與單價、金額對不上）`);
-    } else if (nums.length >= 1) qty = nums[0];
-    else notes.push('數量未辨識');
+    const qty = 1;
     if (!name) notes.push('品名未辨識');
 
     const tokens = name.split(' ');
@@ -125,13 +116,8 @@ export function parseReceiptText(text: string): ParsedReceipt {
     raw.push({ full_product_name: name, model, qty, merged_lines: 1, notes, fixes: [] });
   });
 
-  // 負數量（作廢行或背面透字）不加入，只提示
-  for (const it of raw.filter((r) => (r.qty ?? 0) < 0)) {
-    out.warnings.push(`有一行數量為 ${it.qty}（${it.full_product_name || it.model}），可能是作廢或背面透字，未加入`);
-  }
-
   // 同一型號重複列印時合併
-  for (const it of raw.filter((r) => (r.qty ?? 0) >= 0)) {
+  for (const it of raw) {
     const same = out.items.find((x) => x.model === it.model && x.full_product_name === it.full_product_name);
     if (same && same.qty !== null && it.qty !== null) {
       same.qty += it.qty;

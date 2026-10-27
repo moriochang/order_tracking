@@ -1,7 +1,6 @@
 // 訂單詳情頁的修改對話框。所有變更都透過 RPC，並由資料庫寫入異動紀錄。
 import { useState } from 'react';
 import { ApiError, rpc } from '../lib/api';
-import { todayTaipei } from '../lib/format';
 import { FIELD_LABEL } from '../lib/labels';
 import type { OrderItem, OrderSummary } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
@@ -25,8 +24,10 @@ export function useSubmit(onDone: () => void) {
   return { busy, error, setError, run };
 }
 
-const ORDER_FIELDS = ['customer_name', 'customer_phone', 'purchase_date',
+// 結帳／預購日期固定為建單當天，不提供修改（決策 2026-10-27）
+const ORDER_FIELDS = ['customer_name', 'customer_phone',
   'register_no', 'receipt_seq', 'receipt_no', 'order_note'] as const;
+const DIGITS = { inputMode: 'numeric', pattern: '[0-9]*' };
 
 export function EditOrderDialog({ order, onClose, onSaved }: { order: OrderSummary; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState(() => Object.fromEntries(ORDER_FIELDS.map((f) => [f, order[f] ?? ''])) as Record<string, string>);
@@ -71,10 +72,9 @@ export function EditOrderDialog({ order, onClose, onSaved }: { order: OrderSumma
         <div className="grid2">
           {input('customer_name')}
           {input('customer_phone', { type: 'tel' })}
-          {input('purchase_date', { type: 'date', max: todayTaipei() })}
-          {input('register_no')}
-          {input('receipt_seq')}
-          {input('receipt_no')}
+          {input('register_no', DIGITS)}
+          {input('receipt_seq', DIGITS)}
+          {input('receipt_no', DIGITS)}
         </div>
         <label>{FIELD_LABEL.order_note}<textarea rows={2} value={form.order_note} onChange={(e) => setForm((p) => ({ ...p, order_note: e.target.value }))} /></label>
         <p className="small muted">需要寄送請寫在這裡（收件人、電話、地址）；寄出後請在「完成交付」的交付備註輸入黑貓單號。</p>
