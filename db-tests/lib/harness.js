@@ -35,6 +35,7 @@ export const USERS = {
   managerA: { uid: 'fb-mgr-a',    email: 'mgr.a@istore.com.tw',    name: '林主管',     role: 'manager', stores: ['A01'] },
   staffB:   { uid: 'fb-staff-b',  email: 'staff.b@istore.com.tw',  name: '李大同',     role: 'staff',   stores: ['B02'] },
   viewerA:  { uid: 'fb-view-a',   email: 'view.a@istore.com.tw',   name: '信義檢視',   role: 'viewer',  stores: ['A01'] },
+  extA:     { uid: 'fb-ext-a',    email: 'tia.part@gmail.com',     name: 'Tia',        role: 'staff',   stores: ['A01'] },
 };
 
 let basePromise;

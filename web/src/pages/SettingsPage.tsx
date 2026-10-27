@@ -4,7 +4,7 @@ import { useAuth, useMe } from '../auth/AuthProvider';
 import { ALLOWED_EMAIL_DOMAIN } from '../lib/clients';
 import { adminCreateUser, catalogCount, listAdminAudit, listExportLogs, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
 import { fmtDateTime } from '../lib/format';
-import { ACTION_LABEL, FIELD_LABEL, ROLE_LABEL, errorMessage } from '../lib/labels';
+import { ACTION_LABEL, EXTERNAL_ROLES, FIELD_LABEL, ROLE_LABEL, errorMessage } from '../lib/labels';
 import type { Profile, Role, Store } from '../lib/types';
 import { Dialog, ErrorBanner, useAsync } from '../components/ui';
 
@@ -123,7 +123,7 @@ function UsersSection({ users, stores, error, onSaved }: { users: UserRow[]; sto
             {users.map((u) => (
               <tr key={u.user_id} className={u.is_active ? '' : 'dim'}>
                 <td data-label="姓名">{u.display_name}</td>
-                <td data-label="Email">{u.email}</td>
+                <td data-label="Email">{u.email}{u.is_external && <span className="badge external">外部</span>}</td>
                 <td data-label="角色">{ROLE_LABEL[u.role]}</td>
                 <td data-label="門市">{u.role === 'admin' ? '全部' : u.stores.join('、') || '—'}</td>
                 <td data-label="狀態">{u.is_active ? '啟用' : '停用'}</td>
@@ -158,8 +158,11 @@ function StorePicker({ stores, value, onChange }: { stores: Store[]; value: stri
 }
 
 function CreateUserDialog({ stores, onClose, onSaved }: { stores: Store[]; onClose: () => void; onSaved: () => void }) {
-  // 顯示名稱自動使用 Email @ 前段
+  // 顯示名稱預設為 Email @ 前段；外部帳號（個人 Google 帳號）可以另外填名字
   const [form, setForm] = useState({ email: '', display_name: '', role: 'staff' as Role, store_codes: [] as string[] });
+  const email = form.email.trim().toLowerCase();
+  const external = email.includes('@') && !email.endsWith(`@${ALLOWED_EMAIL_DOMAIN}`);
+  const roles = external ? EXTERNAL_ROLES : (Object.keys(ROLE_LABEL) as Role[]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -168,7 +171,7 @@ function CreateUserDialog({ stores, onClose, onSaved }: { stores: Store[]; onClo
     setBusy(true);
     setError(null);
     try {
-      const r = await adminCreateUser(form);
+      const r = await adminCreateUser({ ...form, email, display_name: form.display_name.trim() });
       setDone(r.email);
       onSaved();
     } catch (e) {
@@ -182,7 +185,7 @@ function CreateUserDialog({ stores, onClose, onSaved }: { stores: Store[]; onClo
     return (
       <Dialog title="帳號已開通" onClose={onClose}>
         <div className="stack">
-          <p>已開通 {done}。請同仁開啟系統網址，按「使用 Google 帳號登入」並選擇這個公司帳號。</p>
+          <p>已開通 {done}。請對方開啟系統網址，按「使用 Google 帳號繼續」並選擇這個帳號登入。</p>
           <div className="row end"><button onClick={onClose}>完成</button></div>
         </div>
       </Dialog>
@@ -191,11 +194,20 @@ function CreateUserDialog({ stores, onClose, onSaved }: { stores: Store[]; onClo
   return (
     <Dialog title="開通帳號" onClose={onClose}>
       <div className="stack">
-        <label>公司 Email（@{ALLOWED_EMAIL_DOMAIN}）<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-        {form.email.includes('@') && <p className="small muted">顯示名稱：{form.email.split('@')[0].trim().toLowerCase()}</p>}
+        <label>Email（公司 @{ALLOWED_EMAIL_DOMAIN}，或工讀生的個人 Google 帳號）
+          <input type="email" value={form.email} onChange={(e) => {
+            const v = e.target.value;
+            const ext = v.includes('@') && !v.trim().toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`);
+            setForm({ ...form, email: v, role: ext && !EXTERNAL_ROLES.includes(form.role) ? 'staff' : form.role });
+          }} /></label>
+        {external && (
+          <p className="small warn-text">這是外部帳號（個人 Google 帳號），只能設為門市同仁或門市檢視。離職時請記得停用。</p>
+        )}
+        <label>顯示名稱<input value={form.display_name} placeholder={email.includes('@') ? email.split('@')[0] : '預設為 Email @ 前段'}
+          onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></label>
         <label>角色
           <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-            {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            {roles.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
           </select>
         </label>
         {form.role !== 'admin' && <StorePicker stores={stores} value={form.store_codes} onChange={(v) => setForm({ ...form, store_codes: v })} />}
@@ -238,9 +250,10 @@ function EditUserDialog({ user, stores, onClose, onSaved }: { user: UserRow; sto
       <div className="stack">
         <label>角色
           <select value={form.role} disabled={self} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-            {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            {(user.is_external ? EXTERNAL_ROLES : (Object.keys(ROLE_LABEL) as Role[])).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
           </select>
         </label>
+        {user.is_external && <p className="small muted">外部帳號（個人 Google 帳號）只能設為門市同仁或門市檢視。</p>}
         {form.role !== 'admin' && <StorePicker stores={stores} value={form.store_codes} onChange={(v) => setForm({ ...form, store_codes: v })} />}
         <label className="radio"><input type="checkbox" disabled={self} checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />帳號啟用</label>
         {self && <p className="small muted">不能變更自己的角色或停用自己。</p>}

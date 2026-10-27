@@ -24,6 +24,7 @@ export type Profile = {
   display_name: string;
   role: Role;
   is_active: boolean;
+  is_external: boolean;   // 外部帳號（個人 Google 帳號，例如工讀生）
   created_at: string;
 };
 

@@ -348,3 +348,5 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
   .cal-months { grid-template-columns: 1fr; }
   .cal-left { display: none; }
 }
+
+.badge.external { margin-left: 6px; background: #fff1d6; color: #93370d; }

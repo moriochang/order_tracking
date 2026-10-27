@@ -36,7 +36,7 @@ function Gate() {
           {state.kind === 'error'
             ? state.message
             : !state.email?.toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`)
-              ? `${state.email ?? '此帳號'} 不是公司帳號，請登出後改用 @${ALLOWED_EMAIL_DOMAIN} 帳號登入。`
+              ? `${state.email ?? '此帳號'} 不是公司帳號，也還沒被管理者開通為外部帳號。請改用 @${ALLOWED_EMAIL_DOMAIN} 帳號登入，或請管理者開通。`
               : `${state.email} 已登入，但尚未被管理者開通或已停用。請聯絡管理者。`}
         </p>
         <button className="login-button" onClick={refresh}>重新檢查</button>

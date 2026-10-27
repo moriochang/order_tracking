@@ -21,16 +21,19 @@ test('T41 token 的 Email 與開通帳號不同時沒有任何權限', async (t)
   assert.equal((await as(db, missing, 'select get_me() as me'))[0].me, null);
 });
 
-test('T42 只能開通公司網域的帳號', async (t) => {
+test('T42 非公司網域的帳號開通後標記為外部帳號，且只能是門市同仁或門市檢視', async (t) => {
   const db = await freshDb(); t.after(() => db.close());
   for (const email of ['someone@gmail.com', 'x@istore.com.tw.evil.com', 'x@notistore.com.tw']) {
     const msg = await expectError(as(db, 'admin',
-      `select admin_create_user('uid-x', $1, '外部人員', 'staff', '{A01}')`, [email]));
-    assert.equal(msg, 'DOMAIN_NOT_ALLOWED', email);
+      `select admin_create_user('uid-x', $1, '外部人員', 'manager', '{A01}')`, [email]));
+    assert.equal(msg, 'EXTERNAL_ROLE_NOT_ALLOWED', email);
   }
+  await as(db, 'admin', `select admin_create_user('uid-ext', 'x@istore.com.tw.evil.com', null, 'staff', '{A01}')`);
+  const [e] = await as(db, 'admin', `select is_external from profiles where auth_uid = 'uid-ext'`);
+  assert.equal(e.is_external, true);
   await as(db, 'admin', `select admin_create_user('uid-new', 'New.Staff@ISTORE.com.tw', '新同仁', 'staff', '{A01}')`);
-  const [p] = await as(db, 'admin', `select email from profiles where auth_uid = 'uid-new'`);
-  assert.equal(p.email, 'new.staff@istore.com.tw');
+  const [p] = await as(db, 'admin', `select email, is_external from profiles where auth_uid = 'uid-new'`);
+  assert.deepEqual(p, { email: 'new.staff@istore.com.tw', is_external: false });
 });
 
 test('T43 即使資料庫裡有外部網域的帳號（例如直接寫入），也無法使用', async (t) => {

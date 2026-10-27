@@ -23,6 +23,8 @@ export const ROLE_LABEL: Record<Role, string> = { viewer: '門市檢視', staff:
 // 門市檢視只能看與匯出，不能做任何修改（資料庫也會拒絕）
 export const canEdit = (role: Role) => role !== 'viewer';
 export const canExport = (role: Role) => role !== 'staff';
+// 外部帳號（個人 Google 帳號）可選的角色
+export const EXTERNAL_ROLES: Role[] = ['viewer', 'staff'];
 
 export const ACTION_LABEL: Record<string, string> = {
   create_order: '建立訂單',
@@ -125,6 +127,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   AUTH_ACCOUNT_EXISTS: '此登入帳號已開通。',
   CANNOT_MODIFY_SELF: '不能變更自己的角色或停用自己。',
   DOMAIN_NOT_ALLOWED: '只能開通公司網域的 Email。',
+  EXTERNAL_ROLE_NOT_ALLOWED: '外部帳號（個人 Google 帳號）只能設為門市同仁或門市檢視。',
   INVALID_BARCODE: '國際條碼格式或檢查碼不正確，請核對條碼數字。',
   SERVER_NOT_CONFIGURED: '伺服器尚未設定 Firebase 服務帳戶，請聯絡系統管理者。',
   OCR_PROVIDER_ERROR: '辨識服務暫時無法使用，請稍後再試，或改用手動輸入。',
