@@ -118,11 +118,12 @@ export function ArrivalDialog({ device, label, order, onClose, onSaved }: Props)
   );
 }
 
-// 通知：預設只通知這一台，可勾選同訂單其他已到貨的機器一起記錄
-export function NotifyDialog({ device, others, label, order, onClose, onSaved }: {
-  device: Device; others: { device: Device; label: string }[]; label: string; order?: OrderRef; onClose: () => void; onSaved: () => void;
+// 通知：預設只通知這一台（或 preselected 指定的機器），可勾選同訂單其他已到貨的機器一起記錄
+export function NotifyDialog({ device, others, label, order, preselected, onClose, onSaved }: {
+  device: Device; others: { device: Device; label: string }[]; label: string; order?: OrderRef;
+  preselected?: string[]; onClose: () => void; onSaved: () => void;
 }) {
-  const [picked, setPicked] = useState<string[]>([device.id]);
+  const [picked, setPicked] = useState<string[]>(preselected ?? [device.id]);
   const [method, setMethod] = useState('phone');
   const [outcome, setOutcome] = useState('contacted');
   const [note, setNote] = useState('');
@@ -168,11 +169,11 @@ export function NotifyDialog({ device, others, label, order, onClose, onSaved }:
 // 可一起取貨的其他機器（同一張訂單、已登記到貨；待到貨的不會列入）
 export type DeliveryOther = { device: Device; label: string; note?: string };
 
-export function DeliveryDialog({ device, label, order, itemNote, others = [], onClose, onSaved }: Props & {
-  itemNote?: string | null; others?: DeliveryOther[];
+export function DeliveryDialog({ device, label, order, itemNote, others = [], preselected, onClose, onSaved }: Props & {
+  itemNote?: string | null; others?: DeliveryOther[]; preselected?: string[];
 }) {
   const [note, setNote] = useState('');
-  const [picked, setPicked] = useState<string[]>([device.id]);
+  const [picked, setPicked] = useState<string[]>(preselected ?? [device.id]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<string[]>([]);

@@ -313,14 +313,14 @@
 <!-- 8 待辦清單 -->
 <section>
   <h2>8. 待辦清單</h2>
-  <p>把「現在該做什麼」集中在一起，每一台機器一列，<b>等待最久的排最前面</b>，列上直接有操作按鈕。</p>
+  <p>把「現在該做什麼」集中在一起，每一台機器一列（待通知、待取貨以訂單為單位），<b>等待最久的排最前面</b>，列上直接有操作按鈕。</p>
   <table>
     <tr><th style="width:18%">分頁</th><th style="width:36%">列出</th><th>排序</th></tr>
     <tr><td><b>全部</b></td><td>所有尚未完成的機器</td><td>結帳日期由舊到新</td></tr>
     <tr><td><span class="btn b-arrival">待到貨</span></td><td>還沒到貨</td><td>結帳日期由舊到新，先訂的先給</td></tr>
-    <tr><td><span class="btn b-notify">待通知</span></td><td>已到貨、尚未聯絡顧客</td><td>到貨時間由舊到新</td></tr>
+    <tr><td><span class="btn b-notify">待通知</span></td><td>已到貨、尚未聯絡顧客。<b>同一張訂單合併成一列</b>，按「通知顧客」會一次勾選這張單所有待通知的機器</td><td>到貨時間由舊到新</td></tr>
     <tr><td><span class="btn b-label">待貼</span></td><td>已到貨、尚未貼標</td><td>到貨時間由舊到新</td></tr>
-    <tr><td><span class="btn b-pickup">待取貨</span></td><td>已通知、顧客尚未取貨</td><td>通知時間由舊到新；<b class="warn">超過 14 天整列標紅</b></td></tr>
+    <tr><td><span class="btn b-pickup">待取貨</span></td><td>已通知、顧客尚未取貨。<b>同一張訂單合併成一列</b>，按「完成取貨」會一次勾選這張單所有待取貨的機器</td><td>通知時間由舊到新；<b class="warn">超過 14 天整列標紅</b></td></tr>
   </table>
   <div class="tip">貨到了：在篩選欄輸入型號（例：MD3Y4），切到「待到貨」，從最上面依序登記，就是先訂先給的順序。</div>
 </section>

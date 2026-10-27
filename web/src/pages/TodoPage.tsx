@@ -15,10 +15,20 @@ type TabKey = 'all' | 'arrival' | 'notify' | 'label' | 'pickup';
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: 'all', label: '全部', hint: '所有尚未完成的機器，依結帳日期由舊到新。' },
   { key: 'arrival', label: '待到貨', hint: '依結帳日期由舊到新，先訂的先給。' },
-  { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。' },
+  { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。同一張訂單合併成一列，一次通知。' },
   { key: 'label', label: '待貼', hint: '已到貨、尚未貼標留貨的機器。' },
-  { key: 'pickup', label: '待取貨', hint: `已通知、顧客尚未取貨，依通知時間排序；超過 ${PICKUP_OVERDUE_DAYS} 天標紅。` },
+  { key: 'pickup', label: '待取貨', hint: `已通知、顧客尚未取貨，依通知時間排序；超過 ${PICKUP_OVERDUE_DAYS} 天標紅。同一張訂單合併成一列，一次取貨。` },
 ];
+
+// 通知與取貨是對顧客、以訂單為單位：同一張訂單合併成一列；其他分頁每台一列
+const byOrder = (tab: TabKey) => tab === 'notify' || tab === 'pickup';
+
+function groupRows(rows: TodoRow[], tab: TabKey): TodoRow[][] {
+  if (!byOrder(tab)) return rows.map((r) => [r]);
+  const groups = new Map<string, TodoRow[]>();
+  for (const r of rows) groups.set(r.order_id, [...(groups.get(r.order_id) ?? []), r]);
+  return [...groups.values()];
+}
 
 const inTab = (r: TodoRow, tab: TabKey) => (
   tab === 'all' ? true
@@ -57,13 +67,19 @@ export function TodoPage() {
   const q = params.get('q') ?? '';
   const [input, setInput] = useState(q);
   const data = useAsync(() => listTodo({ storeCode: store || undefined, q }), [store, q]);
-  const [action, setAction] = useState<{ kind: 'arrival' | 'notify' | 'deliver'; row: TodoRow } | null>(null);
+  // ids：合併列一起處理的機器，對話框預設全部勾選
+  const [action, setAction] = useState<{ kind: 'arrival' | 'notify' | 'deliver'; row: TodoRow; ids?: string[] } | null>(null);
   const [opError, setOpError] = useState<unknown>(null);
   const setParam = (k: string, v: string) => setParams((p) => { if (v) p.set(k, v); else p.delete(k); return p; });
 
   const all = data.data ?? [];
   const rows = all.filter((r) => inTab(r, tab))
     .sort((a, b) => since(a, tab).localeCompare(since(b, tab)) || a.order_no.localeCompare(b.order_no) || a.unit_no - b.unit_no);
+  const groups = groupRows(rows, tab);
+  const tabCount = (t: TabKey) => {
+    const inT = all.filter((r) => inTab(r, t));
+    return byOrder(t) ? new Set(inT.map((r) => r.order_id)).size : inT.length;
+  };
   const label = (r: TodoRow) => `${r.full_product_name}${r.sn ? `（${r.sn}）` : ''}`;
   const orderOf = (r: TodoRow) => ({ no: r.order_no, customer: r.customer_name, phone: r.customer_phone });
 
@@ -88,7 +104,7 @@ export function TodoPage() {
       <div className="row gap wrap">
         {TABS.map((t) => (
           <button key={t.key} type="button" className={`todo-tab todo-tab-${t.key} ${tab === t.key ? 'active' : ''}`} onClick={() => setParam('tab', t.key === 'all' ? '' : t.key)}>
-            {t.label}（{all.filter((r) => inTab(r, t.key)).length}）
+            {t.label}（{tabCount(t.key)}）
           </button>
         ))}
       </div>
@@ -105,7 +121,7 @@ export function TodoPage() {
         </div>
         <button type="submit">篩選</button>
       </form>
-      <p className="muted small">{TABS.find((t) => t.key === tab)?.hint}</p>
+      <p className="muted small">{TABS.find((t) => t.key === tab)?.hint}{byOrder(tab) && rows.length > 0 && ` 共 ${groups.length} 張訂單、${rows.length} 台。`}</p>
       <ErrorBanner error={data.error ?? opError} />
       {data.loading && !data.data && <div className="muted">載入中…</div>}
       {data.data && (rows.length === 0 ? <div className="muted">目前沒有待辦。</div> : (
@@ -118,7 +134,9 @@ export function TodoPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {groups.map((g) => {
+                const r = g[0];   // 已依等待時間排序，第一台等最久
+                const ids = g.map((x) => x.device_id);
                 const start = since(r, tab);
                 const days = daysSince(start);
                 const overdue = tab === 'pickup' && days > PICKUP_OVERDUE_DAYS;
@@ -131,9 +149,15 @@ export function TodoPage() {
                     <td data-label="訂單編號" className="nowrap"><Link to={`/orders/${r.order_id}`}>{r.order_no}</Link></td>
                     <td data-label="顧客" className="nowrap">{r.customer_name}</td>
                     <td data-label="電話" className="nowrap">{r.customer_phone}</td>
-                    <td data-label="品名"><span className="product-name">{r.full_product_name}</span>
-                      {notesOf(r.item_note, r.note) && <div className="device-note block">⚠ {notesOf(r.item_note, r.note)}</div>}</td>
-                    <td data-label="SN">{r.sn ?? '—'}</td>
+                    <td data-label={g.length > 1 ? `品名（${g.length} 台）` : '品名'}>
+                      {g.map((x) => (
+                        <div key={x.device_id}>
+                          <span className="product-name">{x.full_product_name}</span>
+                          {notesOf(x.item_note, x.note) && <div className="device-note block">⚠ {notesOf(x.item_note, x.note)}</div>}
+                        </div>
+                      ))}
+                    </td>
+                    <td data-label="SN">{g.map((x) => <div key={x.device_id}>{x.sn ?? '—'}</div>)}</td>
                     <td data-label="狀態"><StatusBadge status={r.status} /></td>
                     {editable && <td data-label="操作">
                       <div className="row gap">
@@ -144,10 +168,10 @@ export function TodoPage() {
                           <button type="button" className="step step-label" onClick={() => markLabeled(r)}>已貼</button>
                         )}
                         {(tab === 'notify' || tab === 'pickup' || (tab === 'all' && r.status === 'arrived_pending_notify')) && (
-                          <button type="button" className="step step-notify" onClick={() => setAction({ kind: 'notify', row: r })}>{r.status === 'notified_pending_pickup' ? '再次通知' : '通知顧客'}</button>
+                          <button type="button" className="step step-notify" onClick={() => setAction({ kind: 'notify', row: r, ids })}>{r.status === 'notified_pending_pickup' ? '再次通知' : '通知顧客'}</button>
                         )}
                         {(tab === 'pickup' || tab === 'notify' || (tab === 'all' && r.status !== 'pending_arrival')) && (
-                          <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r })}>完成取貨</button>
+                          <button type="button" className="step step-deliver" onClick={() => setAction({ kind: 'deliver', row: r, ids })}>完成取貨</button>
                         )}
                       </div>
                     </td>}
@@ -163,14 +187,14 @@ export function TodoPage() {
         <ArrivalDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'deliver' && (
-        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} itemNote={action.row.item_note}
+        <DeliveryDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} itemNote={action.row.item_note} preselected={action.ids}
           others={all
             .filter((r) => r.order_id === action.row.order_id && r.device_id !== action.row.device_id && r.status !== 'pending_arrival')
             .map((r) => ({ device: toDevice(r), label: label(r), note: notesOf(r.item_note, r.note) }))}
           onClose={() => setAction(null)} onSaved={data.reload} />
       )}
       {action?.kind === 'notify' && (
-        <NotifyDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} onClose={() => setAction(null)} onSaved={data.reload}
+        <NotifyDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} preselected={action.ids} onClose={() => setAction(null)} onSaved={data.reload}
           others={all
             .filter((r) => r.order_id === action.row.order_id && r.device_id !== action.row.device_id && r.status !== 'pending_arrival')
             .map((r) => ({ device: toDevice(r), label: label(r) }))} />
