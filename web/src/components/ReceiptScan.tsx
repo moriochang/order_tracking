@@ -69,7 +69,7 @@ export function ReceiptScanDialog({ onApply, onClose }: { onApply: (r: ScanResul
           <input type="file" accept="image/*" className="hidden" disabled={busy}
             onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
-        <p className="small muted">單據放平擺正、光線充足。可以從照片選取。</p>
+        <p className="small muted">單據放平擺正、光線充足。系統只讀「預購明細 Pre-Sale」到底部條碼這一段，下方注意事項不用拍進去。可以從照片選取。</p>
         <ErrorBanner error={error} />
         {imageUrl && <a href={imageUrl} target="_blank" rel="noreferrer"><img src={imageUrl} alt="單據照片" className="scan-thumb" /></a>}
 

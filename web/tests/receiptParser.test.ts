@@ -99,3 +99,29 @@ test('空白或無關文字：不捏造欄位', () => {
   assert.deepEqual([r.receipt_no, r.purchase_date, r.register_no, r.receipt_seq, r.items.length], ['', '', '', '', 0]);
   assert.ok(r.warnings.length >= 5);
 });
+
+test('只解析明細區塊：「消費金額」沒辨識到時，底部注意事項也不會被當成商品', () => {
+  const r = parseReceiptText(`立展資訊科技股份有限公司
+預購明細Pre-Sale
+iStore台中店
+*75000003*
+銷售日期: 2026/10/03
+機號: 011 收銀員: A00001 序號: 240
+產品代碼/品名 數量 單價 點數/金額
+APPLE
+iPhone 18 Pro 256 黑 MJRP4 0點
+195951419343 1 44,900 44,900TX
+應稅科技: NT$44,900
+2026/10/03 16:17:17 9999 011 00240
+*07501100240*
+實體店面無七天鑑賞期。
+產品保固為購買當日起始計算
+你可連同全新的Apple 產品一起購買 AppleCare+
+2.致電 0800-095-988 或 02-2558-0806
+0800095988 1 2558 0806
+NT$1,000`);
+  assert.equal(r.items.length, 1);
+  assert.equal(r.items[0].model, 'MJRP4');
+  assert.deepEqual([r.receipt_no, r.register_no, r.receipt_seq], ['75000003', '011', '240']);
+  assert.ok(r.checks.every((c) => c.ok), JSON.stringify(r.checks));
+});

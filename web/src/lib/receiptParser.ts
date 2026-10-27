@@ -53,8 +53,26 @@ function parseNumbers(rest: string) {
   return (joined.match(/-?[\d,]*\d/g) ?? []).map(num);
 }
 
+// 只取單據的明細區塊：「預購明細 Pre-Sale」到底部條碼（*07501100240*）為止。
+// 上方公司名稱與底部注意事項（鑑賞期、保固、AppleCare+ 說明與客服電話）都不解析。
+function receiptBlock(all: string[]) {
+  let from = all.findIndex((l) => /預購明細|Pre-?Sale/i.test(l));
+  if (from < 0) from = 0;
+  const footIdx = all.findIndex((l, i) => i > from && /\d{4}\/\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}:\d{2}/.test(l) && !/銷售日期/.test(l));
+  let to = all.length;
+  if (footIdx >= 0) {
+    // 底部時間那一行之後，緊接的條碼行也算在內
+    to = footIdx + 1;
+    while (to < all.length && to <= footIdx + 2 && /^\*?\s*[\d\s]{6,}\*?$/.test(all[to])) to++;
+  } else {
+    const notice = all.findIndex((l, i) => i > from && /鑑賞期|保固|AppleCare/i.test(l));
+    if (notice >= 0) to = notice;
+  }
+  return all.slice(from, to);
+}
+
 export function parseReceiptText(text: string): ParsedReceipt {
-  const lines = normalize(text);
+  const lines = receiptBlock(normalize(text));
   const out: ParsedReceipt = {
     receipt_no: '', purchase_date: '', register_no: '', receipt_seq: '',
     items: [], checks: [], warnings: [],
