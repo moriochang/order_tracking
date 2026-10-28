@@ -36,10 +36,11 @@ alter table public.order_items disable trigger user;
 alter table public.orders disable trigger user;
 
 delete from public.audit_logs where order_id in (select id from purge_orders) or entity_type = 'export';
+-- 刪除順序依關聯：通知 → 單機 → 商品明細 → 掃描原文（商品明細會指向它）→ 訂單
 delete from public.notifications where order_id in (select id from purge_orders);
-delete from public.import_drafts where order_id in (select id from purge_orders);
 delete from public.devices where order_id in (select id from purge_orders);
 delete from public.order_items where order_id in (select id from purge_orders);
+delete from public.import_drafts where order_id in (select id from purge_orders);
 delete from public.orders where id in (select id from purge_orders);
 
 -- 恢復保護

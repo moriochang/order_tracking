@@ -11,6 +11,11 @@ const count = async (db, sql) => Number((await asDbAdmin(db, sql))[0].n);
 async function seed(db) {
   const a = await createOrder(db, 'staffA', { register_no: '011', receipt_seq: '1' });
   const b = await createOrder(db, 'staffA', { register_no: '011', receipt_seq: '2' });
+  // 拍照辨識建立的訂單：商品明細會指向掃描原文（2026-10-28 演練時發現的刪除順序問題）
+  await createOrder(db, 'staffA', {
+    register_no: '011', receipt_seq: '3', scan: { raw_text: '預購明細', parsed: {} },
+    items: [{ full_product_name: '示範手機 DEMO4', model: 'DEMO4', ordered_qty: 1, source: 'ocr' }],
+  });
   const [dev] = await as(db, 'staffA', 'select id, version from devices where order_id = $1', [a.order_id]);
   await as(db, 'staffA', 'select register_arrival($1, $2, $3)', [dev.id, dev.version, 'SN-A']);
   await as(db, 'staffA', `select record_notification($1, 'phone', 'contacted')`, [[dev.id]]);
@@ -35,7 +40,8 @@ test('T160 保留指定訂單、清除其他；帳號紀錄保留；保護恢復
   assert.ok(await count(db, 'select count(*) n from profiles') > 0);
 
   const [log] = await asDbAdmin(db, `select after_data from audit_logs where action = 'reset_test_data'`);
-  assert.deepEqual(log.after_data, { orders: 1, devices: 1, kept_orders: 1 });
+  assert.deepEqual(log.after_data, { orders: 2, devices: 2, kept_orders: 1 });
+  assert.equal(await count(db, 'select count(*) n from import_drafts'), 0);
 
   // 保護已恢復
   assert.equal(await expectError(asDbAdmin(db, `update audit_logs set reason = 'x' where action = 'reset_test_data'`)), 'AUDIT_IMMUTABLE');
