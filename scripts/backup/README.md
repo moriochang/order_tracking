@@ -39,3 +39,10 @@ cd order_tracking/scripts/backup
 3. 重新部署 Edge Functions（admin-users、ocr-receipt）與 Secrets，前端改用新專案的網址與 publishable key。
 
 備份內的觸發器在資料匯入之後才建立，所以還原時不會重複寫入異動紀錄，也不會被狀態檢查擋下。
+
+還原時會出現兩種錯誤訊息，都不影響資料，可以忽略（2026-10-28 演練確認）：
+
+- `schema "public" already exists`
+- `role "supabase_admin" does not exist`（只在非 Supabase 的資料庫出現）
+
+psql 需為 18 版（備份由 pg_dump 18 產生，檔案內有 psql 18 才認得的 `\restrict` 指令）。演練紀錄見 `docs/backup/`。
