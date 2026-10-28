@@ -49,6 +49,7 @@ export const ACTION_LABEL: Record<string, string> = {
   admin_import_catalog: '匯入產品資料',
   update_device_note: '單機備註',
   export_orders: '匯出訂單',
+  reset_test_data: '清除測試資料',
   direct_db_change: '⚠ 未經系統流程的資料庫修改',
 };
 
