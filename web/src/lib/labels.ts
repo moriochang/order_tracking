@@ -37,7 +37,7 @@ export const ACTION_LABEL: Record<string, string> = {
   cancel_order: '取消訂單',
   register_arrival: '登記到貨',
   record_notification: '通知顧客',
-  set_labeled: '已貼標記',
+  set_labeled: '已貼',
   complete_delivery: '完成取貨',
   correct_sn: '更正 SN',
   correct_device_status: '更正狀態',
@@ -94,7 +94,7 @@ export const AUDIT_FILTERS: { key: string; label: string; actions: string[] }[] 
   { key: 'item', label: '商品／SN', actions: ['add_order_item', 'update_order_item', 'change_item_quantity', 'correct_sn', 'update_device_note'] },
   { key: 'arrival', label: '到貨', actions: ['register_arrival'] },
   { key: 'notify', label: '通知', actions: ['record_notification'] },
-  { key: 'label', label: '貼標', actions: ['set_labeled'] },
+  { key: 'label', label: '已貼', actions: ['set_labeled'] },
   { key: 'deliver', label: '取貨', actions: ['complete_delivery'] },
   { key: 'cancel', label: '取消／更正', actions: ['cancel_device', 'cancel_order_item', 'cancel_order', 'correct_device_status', 'direct_db_change'] },
 ];
