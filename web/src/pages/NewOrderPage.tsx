@@ -31,6 +31,23 @@ function headerProblems(h: Header): string[] {
   return p;
 }
 
+const TITLES = ['先生', '小姐'];
+
+// 稱謂快速鍵：加在姓名後面；換另一個會取代，再按一次同一個會移除
+function TitleChips({ name, onChange }: { name: string; onChange: (name: string) => void }) {
+  const trimmed = name.trim();
+  const current = TITLES.find((t) => trimmed.endsWith(t));
+  const base = current ? trimmed.slice(0, -current.length) : trimmed;
+  return (
+    <div className="chips title-chips">
+      {TITLES.map((t) => (
+        <button key={t} type="button" className={`chip${current === t ? ' on' : ''}`}
+          onClick={() => onChange(current === t ? base : base + t)}>{t}</button>
+      ))}
+    </div>
+  );
+}
+
 export function NewOrderPage() {
   const me = useMe();
   const navigate = useNavigate();
@@ -183,7 +200,10 @@ export function NewOrderPage() {
               </div>
             )}
             <div className="grid2">
-              <label>顧客姓名（必填）<input value={h.customer_name} onChange={(e) => set({ customer_name: e.target.value })} /></label>
+              <div className="field">
+                <label>顧客姓名（必填）<input value={h.customer_name} onChange={(e) => set({ customer_name: e.target.value })} /></label>
+                <TitleChips name={h.customer_name} onChange={(customer_name) => set({ customer_name })} />
+              </div>
               <label>聯絡電話（必填）<input type="tel" inputMode="tel" value={h.customer_phone} onChange={(e) => set({ customer_phone: e.target.value })} /></label>
               <label>結帳／預購日期<input value={fmtDate(h.purchase_date)} readOnly disabled /></label>
               <label>
