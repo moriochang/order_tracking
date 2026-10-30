@@ -51,7 +51,6 @@ export function HomePage() {
             : <div key={t.key} className={`tile stat tile-${t.key}`}>{body}</div>;
         })}
       </section>
-      <p className="muted small">數字依每台機器的實際狀態即時計算，不含已取消。點數字可進入待辦清單。</p>
       {sheet.data?.url && (
         <p className="small">
           Google 試算表最後同步：{syncedAt ? `${fmtDateTime(syncedAt)}（${sheet.data.last_rows ?? 0} 列）` : '尚無紀錄'}
