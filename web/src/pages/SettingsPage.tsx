@@ -268,8 +268,8 @@ function EditUserDialog({ user, stores, onClose, onSaved }: { user: UserRow; sto
   );
 }
 
-// 產品資料：上傳公司建檔的 Excel（欄位 Code、product_name、大分類、中分類、小分類、14.EAN），整批取代
-type CatalogRow = { code: string; product_name: string; category: string; sub_category: string; detail_category: string; ean: string };
+// 產品資料：上傳公司建檔的 Excel（欄位 Code、product_name、大分類、中分類、小分類、14.EAN、manufacture_style），整批取代
+type CatalogRow = { code: string; product_name: string; category: string; sub_category: string; detail_category: string; ean: string; manufacture_style: string };
 
 async function readCatalogFile(file: File): Promise<CatalogRow[]> {
   const { default: readXlsxFile } = await import('read-excel-file/browser');
@@ -280,6 +280,7 @@ async function readCatalogFile(file: File): Promise<CatalogRow[]> {
     if (col('Code') < 0 || col('product_name') < 0) continue;
     const cell = (row: unknown[], name: string) => (col(name) < 0 ? '' : String(row[col(name)] ?? '').trim());
     const eanCol = header.findIndex((h) => /EAN$/i.test(h));
+    const styleCol = header.findIndex((h) => /^manufacture_style$/i.test(h));
     for (const row of data.slice(1)) {
       const raw = row[col('Code')];
       // 代碼若被 Excel 存成數字，補回前導 0（建檔代碼為 10 碼）
@@ -287,7 +288,8 @@ async function readCatalogFile(file: File): Promise<CatalogRow[]> {
       const name = cell(row, 'product_name');
       if (code && name) {
         rows.push({ code, product_name: name, category: cell(row, '大分類'), sub_category: cell(row, '中分類'), detail_category: cell(row, '小分類'),
-          ean: eanCol < 0 ? '' : String(row[eanCol] ?? '').trim() });
+          ean: eanCol < 0 ? '' : String(row[eanCol] ?? '').trim(),
+          manufacture_style: styleCol < 0 ? '' : String(row[styleCol] ?? '').trim() });
       }
     }
   }
@@ -300,10 +302,11 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState('');
+  const [ackShrink, setAckShrink] = useState(false);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
-    setError(null); setDone(''); setRows(null); setBusy(true);
+    setError(null); setDone(''); setRows(null); setAckShrink(false); setBusy(true);
     try {
       const parsed = await readCatalogFile(file);
       if (!parsed.length) throw new Error('檔案中找不到「Code」與「product_name」欄位');
@@ -331,6 +334,10 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
     }
   }
 
+  // 新檔案比現有資料少一半以上，多半是篩選沒清掉或漏複製；要勾選確認才能匯入
+  const current = count.data ?? 0;
+  const shrink = rows && current > 0 && rows.length < current / 2 ? Math.round((1 - rows.length / current) * 100) : 0;
+
   const byCategory = rows && Object.entries(rows.reduce<Record<string, number>>((m, r) => {
     m[r.category || '（無）'] = (m[r.category || '（無）'] ?? 0) + 1;
     return m;
@@ -341,7 +348,7 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
       <h2>產品資料</h2>
       <p className="small muted">
         拍照辨識時用型號比對建檔品名，自動校正辨識錯字。目前 {count.data?.toLocaleString() ?? '…'} 筆。
-        上傳 Excel（需有 Code、product_name 欄位；有「14.EAN」欄會一併匯入國際條碼）會整批取代現有資料。
+        上傳 Excel（需有 Code、product_name 欄位；有「14.EAN」欄會一併匯入國際條碼；有「manufacture_style」欄時，型號以原廠型號去掉地區碼為準）會整批取代現有資料。
       </p>
       <label className={`button secondary ${busy ? 'disabled' : ''}`}>
         {busy && !rows ? '讀取中…' : '選擇 Excel 檔'}
@@ -353,9 +360,19 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
       {rows && byCategory && (
         <div className="card inset stack">
           <div>讀到 {rows.length.toLocaleString()} 筆：{byCategory.map(([c, n]) => `${c} ${n.toLocaleString()}`).join('、')}</div>
+          {shrink > 0 && (
+            <div className="alert error stack">
+              <div>⚠ 這份檔案有 {rows.length.toLocaleString()} 筆，比現有的 {current.toLocaleString()} 筆少了 {shrink}%。
+                匯入會整批取代，少掉的產品之後將帶不出品名。請確認檔案沒有篩選、沒有漏掉資料。</div>
+              <label className="radio">
+                <input type="checkbox" checked={ackShrink} onChange={(e) => setAckShrink(e.target.checked)} />
+                我確認要用這份檔案取代全部產品資料
+              </label>
+            </div>
+          )}
           <div className="row gap end">
             <button className="secondary" onClick={() => setRows(null)} disabled={busy}>取消</button>
-            <button onClick={importRows} disabled={busy}>{busy ? '匯入中…' : '確認匯入（取代現有資料）'}</button>
+            <button onClick={importRows} disabled={busy || (shrink > 0 && !ackShrink)}>{busy ? '匯入中…' : '確認匯入（取代現有資料）'}</button>
           </div>
         </div>
       )}

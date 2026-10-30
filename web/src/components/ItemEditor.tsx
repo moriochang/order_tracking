@@ -50,7 +50,8 @@ export function draftItemPayload(item: DraftItem) {
 // null 表示尚未查詢、條碼格式不對且型號太短
 export function useCatalogLookup(model: string, barcode: string) {
   const ean = gtin14(barcode);
-  const m = model.trim().toUpperCase();
+  // 輸入完整原廠型號（MJY04TA/A）時，去掉地區碼再查
+  const m = model.trim().toUpperCase().replace(/^([A-Z0-9]{5})[A-Z]{1,2}\/A$/, '$1');
   const key = ean ? `ean:${ean}` : m.length >= 4 ? `model:${m}` : '';
   const [result, setResult] = useState<{ key: string; names: string[] } | null>(null);
   useEffect(() => {

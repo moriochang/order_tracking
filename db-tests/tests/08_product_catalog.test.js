@@ -40,3 +40,19 @@ test('T71 匯入國際條碼：補前導 0 成 14 碼；格式不對的不存', 
   const rows = await as(db, 'staffA', 'select ean from product_catalog order by code');
   assert.deepEqual(rows.map((x) => x.ean), ['04895241143618', null, null]);
 });
+
+test('T72 型號優先取原廠型號去掉地區碼；沒有原廠型號時取品名最後一段', async (t) => {
+  const db = await freshDb(); t.after(() => db.close());
+  await as(db, 'admin', 'select admin_import_catalog($1)', [JSON.stringify([
+    { code: '0000000001', product_name: '示範手機 17 PM 256G 橙 DEMO4', category: 'iPhone', manufacture_style: 'DEMO4TA/A' },
+    { code: '0000000002', product_name: '示範筆電 13 128G DEMO5 專', category: 'CPU', manufacture_style: 'demo5ta/a' },
+    { code: '0000000003', product_name: '示範手機 打錯 DEM06', category: 'iPhone', manufacture_style: 'DEMO6ZP/A' },
+    { code: '0000000004', product_name: '示範保固 S1234', category: 'Care', manufacture_style: 'S1234Z/A' },
+    { code: '0000000005', product_name: '示範保護殼 黑', category: '3rd Party', manufacture_style: '4895241143618' },
+    { code: '0000000006', product_name: '示範桌機 客製 Z1U4', category: 'CPU', manufacture_style: 'Z1U4000CV' },
+    { code: '0000000007', product_name: '示範手機 DEMO7', category: 'iPhone' },
+  ])]);
+  const rows = await as(db, 'staffA', 'select model, manufacture_style from product_catalog order by code');
+  assert.deepEqual(rows.map((x) => x.model), ['DEMO4', 'DEMO5', 'DEMO6', 'S1234', null, 'Z1U4', 'DEMO7']);
+  assert.equal(rows[1].manufacture_style, 'DEMO5TA/A');
+});
