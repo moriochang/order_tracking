@@ -63,6 +63,8 @@
   .card .title { font-weight: 700; margin-bottom: 4px; }
   .num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--text); color: #fff; font-size: 9pt; font-weight: 700; margin-right: 6px; }
   .footer-note { margin-top: 24px; font-size: 9pt; color: var(--muted); }
+  .backup-flow { margin: 10px 0 14px; break-inside: avoid; overflow-x: auto; }
+  .backup-flow svg { display: block; width: 100%; min-width: 600px; height: auto; }
 </style>
 </head>
 <body>
@@ -91,6 +93,7 @@
     <div>8. 待辦清單</div>
     <div>9. 備註怎麼填</div>
     <div>10. 常見問題</div>
+    <div>11. 資料備份與同步</div>
   </div>
 </section>
 
@@ -375,6 +378,125 @@
     <tr><td>電腦上傳 HEIC 照片失敗</td><td>用 iPhone 直接拍照，或先把照片轉成 JPG。</td></tr>
     <tr><td>登入後顯示「帳號尚未開通」</td><td>請總部管理者開通；或確認是否用了私人 Google 帳號。</td></tr>
   </table>
+</section>
+
+<!-- 11 備份 -->
+<section>
+  <h2>11. 資料備份與同步</h2>
+  <p>系統每天自動備份，並把訂單同步到 Google 試算表、每晚寄出 Excel。<b>綠色</b>是能把整個系統救回來的備份；<b>橘色</b>是方便查詢的副本，不能匯回系統；<b>紅色</b>是異常時的通知。</p>
+  <div class="backup-flow">
+    <svg viewBox="0 0 1100 660" role="img" aria-label="備份流程圖">
+      <defs>
+        <marker id="bfArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e6e73"/></marker>
+        <marker id="bfArrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#248a3d"/></marker>
+        <marker id="bfArrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#c8323c"/></marker>
+      </defs>
+      <g font-family="-apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif" fill="#1d1d1f">
+        <rect x="360" y="16" width="240" height="72" rx="12" fill="#e6f0fc" stroke="#0071e3" stroke-width="2"/>
+        <text x="480" y="46" text-anchor="middle" font-size="16" font-weight="700">Database</text>
+        <text x="480" y="70" text-anchor="middle" font-size="13" fill="#6e6e73">訂單・單機・異動紀錄・帳號・產品資料</text>
+
+        <path d="M480 88 V108 H220 V150" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+        <path d="M480 108 H740 V150" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+        <text x="220" y="132" text-anchor="middle" font-size="14" font-weight="700" fill="#248a3d">能完整還原系統</text>
+        <text x="740" y="132" text-anchor="middle" font-size="14" font-weight="700" fill="#c25a14">查詢用副本（不能匯回）</text>
+
+        <rect x="70" y="152" width="300" height="70" rx="10" fill="#fff" stroke="#248a3d" stroke-width="2"/>
+        <text x="88" y="178" font-size="13" font-weight="700" fill="#248a3d">每天 03:00</text>
+        <text x="174" y="178" font-size="16" font-weight="700">Mac mini 備份</text>
+        <text x="88" y="204" font-size="13" fill="#6e6e73">確認備份完整才保存</text>
+        <path d="M220 222 V256" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <rect x="70" y="258" width="300" height="70" rx="10" fill="#e5f3ea" stroke="#248a3d" stroke-width="2"/>
+        <text x="88" y="284" font-size="16" font-weight="700">Google 雲端硬碟</text>
+        <text x="88" y="310" font-size="13" fill="#6e6e73">保留 14 天＋每月 1 日永久保留</text>
+        <path d="M220 328 V362" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <rect x="70" y="364" width="300" height="70" rx="10" fill="#fff" stroke="#248a3d" stroke-width="2"/>
+        <text x="88" y="390" font-size="13" font-weight="700" fill="#248a3d">每天 09:00</text>
+        <text x="174" y="390" font-size="16" font-weight="700">備份檢查</text>
+        <text x="88" y="416" font-size="13" fill="#6e6e73">找今天 03:00 的備份檔</text>
+        <path d="M220 434 V462" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <polygon points="220,464 320,506 220,548 120,506" fill="#fff" stroke="#c7c7cc" stroke-width="2"/>
+        <text x="220" y="502" text-anchor="middle" font-size="13">今天有備份</text>
+        <text x="220" y="520" text-anchor="middle" font-size="13">且 ≥ 100 KB？</text>
+        <path d="M120 506 H90 V586" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+        <text x="96" y="498" text-anchor="end" font-size="13" fill="#6e6e73">是</text>
+        <rect x="22" y="588" width="150" height="54" rx="10" fill="#e5f3ea" stroke="#248a3d" stroke-width="2"/>
+        <text x="97" y="620" text-anchor="middle" font-size="15" font-weight="700">正常，不寄信</text>
+        <path d="M320 506 H350 V586" fill="none" stroke="#c8323c" stroke-width="2" marker-end="url(#bfArrR)"/>
+        <text x="330" y="498" font-size="13" font-weight="700" fill="#c8323c">否</text>
+        <rect x="250" y="588" width="200" height="54" rx="10" fill="#fbe7e8" stroke="#c8323c" stroke-width="2"/>
+        <text x="350" y="620" text-anchor="middle" font-size="15" font-weight="700" fill="#c8323c">寄備份異常通知</text>
+
+        <path d="M70 293 H34 V52 H358" fill="none" stroke="#248a3d" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#bfArrG)"/>
+        <text x="44" y="236" transform="rotate(-90 44 236)" text-anchor="middle" font-size="13" font-weight="700" fill="#248a3d">出事時還原</text>
+
+        <rect x="590" y="152" width="300" height="70" rx="10" fill="#fff" stroke="#c25a14" stroke-width="2"/>
+        <text x="608" y="178" font-size="13" font-weight="700" fill="#c25a14">每 10 分鐘</text>
+        <text x="694" y="178" font-size="16" font-weight="700">同步</text>
+        <text x="608" y="204" font-size="13" fill="#6e6e73">每小時 05、15…55 分，整份重寫</text>
+        <path d="M740 222 V256" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <path d="M890 187 H926" fill="none" stroke="#c8323c" stroke-width="2" marker-end="url(#bfArrR)"/>
+        <rect x="928" y="146" width="160" height="96" rx="10" fill="#fbe7e8" stroke="#c8323c" stroke-width="2"/>
+        <text x="944" y="172" font-size="15" font-weight="700" fill="#c8323c">同步防護</text>
+        <text x="944" y="194" font-size="12" fill="#6e6e73">資料比試算表少一半以上</text>
+        <text x="944" y="212" font-size="12" fill="#6e6e73">不覆蓋、暫停、寄通知</text>
+        <text x="944" y="230" font-size="12" fill="#6e6e73">到「設定」按允許後恢復</text>
+
+        <rect x="590" y="258" width="300" height="70" rx="10" fill="#fbeee4" stroke="#c25a14" stroke-width="2"/>
+        <text x="608" y="284" font-size="16" font-weight="700">Google 試算表</text>
+        <text x="608" y="310" font-size="13" fill="#6e6e73">預購訂單・同步時間・每日核對</text>
+        <path d="M740 328 V362" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <rect x="590" y="364" width="300" height="70" rx="10" fill="#fff" stroke="#c25a14" stroke-width="2"/>
+        <text x="608" y="390" font-size="13" font-weight="700" fill="#c25a14">每天 22:10</text>
+        <text x="694" y="390" font-size="16" font-weight="700">核對</text>
+        <text x="608" y="416" font-size="13" fill="#6e6e73">逐列比對，有差異就重新同步</text>
+        <path d="M740 434 V468" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <rect x="590" y="470" width="300" height="70" rx="10" fill="#fff" stroke="#c25a14" stroke-width="2"/>
+        <text x="608" y="496" font-size="13" font-weight="700" fill="#c25a14">每天 22:30</text>
+        <text x="694" y="496" font-size="16" font-weight="700">每日寄送</text>
+        <text x="608" y="522" font-size="13" fill="#6e6e73">預購訂單_YYYYMMDD.xlsx</text>
+        <path d="M740 540 V586" fill="none" stroke="#c7c7cc" stroke-width="2" marker-end="url(#bfArr)"/>
+
+        <rect x="590" y="588" width="300" height="54" rx="10" fill="#fbeee4" stroke="#c25a14" stroke-width="2"/>
+        <text x="608" y="611" font-size="15" font-weight="700">門市信箱</text>
+        <text x="608" y="631" font-size="13" fill="#6e6e73">每天一份訂單快照＋匯出紀錄</text>
+      </g>
+    </svg>
+  </div>
+
+  <h3>一天的排程</h3>
+  <table>
+    <tr><th style="width:18%">時間</th><th style="width:24%">項目</th><th>內容</th></tr>
+    <tr><td>03:00</td><td>資料庫備份</td><td>Mac mini 備份整個資料庫到 Google 雲端硬碟</td></tr>
+    <tr><td>09:00</td><td>備份檢查</td><td>找不到今天的備份或檔案太小，寄通知給管理者</td></tr>
+    <tr><td>每 10 分鐘</td><td>試算表同步</td><td>每小時 05、15…55 分；首頁可看到最後同步時間（門市檢視、主管、管理者）</td></tr>
+    <tr><td>22:10</td><td>試算表核對</td><td>結果記在試算表的「每日核對」分頁</td></tr>
+    <tr><td>22:30</td><td>每日寄送</td><td>匯出 Excel 寄到門市信箱，設定頁的匯出紀錄會多一筆「每日自動寄送」</td></tr>
+  </table>
+
+  <h3>出事時用哪一份</h3>
+  <table>
+    <tr><th style="width:30%">情況</th><th>處理方式</th></tr>
+    <tr><td>同仁按錯、改錯</td><td>用異動紀錄查原本的值，以「更正」改回；不需要動備份</td></tr>
+    <tr><td>系統暫時打不開</td><td>開 Google 試算表照常查訂單，最多落後 10 分鐘</td></tr>
+    <tr><td>想看某一天當時的狀態</td><td>到信箱找那一天寄出的 Excel</td></tr>
+    <tr><td>資料被改壞或大量不見</td><td>試算表同步會自動暫停、保留出事前的內容；先查原因，再決定是否還原</td></tr>
+    <tr><td>資料庫損毀、資料遺失</td><td>由管理者以雲端硬碟的備份還原到最近一次 03:00，之後的資料依紙本收據補登</td></tr>
+  </table>
+
+  <h3>同步暫停時（管理者）</h3>
+  <ol>
+    <li>首頁與「設定 → Google 試算表同步」會出現紅色的「⚠ 同步已暫停」，並寫出原因（例如「試算表現有 42 列，這次只有 0 列」）。</li>
+    <li>先確認資料是否正確。正式上線前清除測試資料也會觸發，屬於正常。</li>
+    <li>確認無誤後，按「<b>確認資料正確，允許下一次同步</b>」，10 分鐘內恢復同步。</li>
+  </ol>
+  <div class="note">門市檢視、主管在首頁只會看到「⚠ 同步已暫停（請通知管理者）」；只有管理者看得到「允許」按鈕。</div>
   <div class="footer-note">TC © 2026　預購商品追蹤</div>
 </section>
 
