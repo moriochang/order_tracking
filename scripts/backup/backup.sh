@@ -26,7 +26,5 @@ gzip -dc "$TMP" | tail -n 5 | grep -q "PostgreSQL database dump complete" \
 mv "$TMP" "$OUT"
 echo "$(TZ=Asia/Taipei date '+%F %T') 備份完成：${OUT}（$(du -h "$OUT" | cut -f1)）"
 
-# 保留規則：最近 14 天每天一份；每月 1 日的備份永久保留
-find "$BACKUP_DIR" -name 'order_tracking_*.sql.gz' -mtime +14 | while read -r f; do
-  case "$(basename "$f")" in order_tracking_??????01_*) ;; *) rm -f "$f" ;; esac
-done
+# 保留規則：最近 60 天每天一份（2026-10-30 起；原為 14 天＋每月 1 日永久保留）
+find "$BACKUP_DIR" -name 'order_tracking_*.sql.gz' -mtime +59 | while read -r f; do rm -f "$f"; done
