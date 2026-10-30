@@ -16,8 +16,8 @@ type TabKey = 'all' | 'arrival' | 'notify' | 'label' | 'pickup';
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: 'all', label: '全部', hint: '所有尚未完成的機器，依結帳日期由舊到新。' },
   { key: 'arrival', label: '待到貨', hint: '依結帳日期由舊到新，先訂的先給。可勾選多台批次登記到貨。' },
-  { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。同一張訂單合併成一列，一次通知；可勾選多張批次通知。' },
   { key: 'label', label: '待貼', hint: '已到貨、尚未貼標留貨的機器。可勾選多台批次標記已貼。' },
+  { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。同一張訂單合併成一列，一次通知；可勾選多張批次通知。' },
   { key: 'pickup', label: '待取貨', hint: `已通知、顧客尚未取貨，依通知時間排序；超過 ${PICKUP_OVERDUE_DAYS} 天標紅。同一張訂單合併成一列，一次取貨。` },
 ];
 
