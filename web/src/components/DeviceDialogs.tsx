@@ -1,10 +1,10 @@
-// 單機作業對話框：登記到貨（SN）、通知顧客、完成取貨、更正 SN
-import { useEffect, useState } from 'react';
+// 單機作業對話框：登記到貨（SN 選填）、通知顧客、完成取貨、更正 SN；待辦清單的批次作業
+import { useState } from 'react';
 import { ocrReceipt, rpc } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { linesFromWords } from '../lib/ocrLayout';
 import { extractSerials, looksLikeSn, normalizeSn } from '../lib/serial';
-import { METHOD_LABEL, OUTCOME_LABEL } from '../lib/labels';
+import { METHOD_LABEL, OUTCOME_LABEL, errorMessage } from '../lib/labels';
 import type { Device } from '../lib/types';
 import { Dialog, ErrorBanner } from './ui';
 import { useSubmit } from './OrderDialogs';
@@ -90,27 +90,20 @@ function SnInput({ value, onChange, label }: { value: string; onChange: (v: stri
 
 export function ArrivalDialog({ device, label, order, onClose, onSaved }: Props) {
   const [sn, setSn] = useState('');
-  // Mac、iPad、iPhone、Apple Watch、AirPods、HomePod 必須登記 SN（由資料庫依產品分類判斷）
-  const [required, setRequired] = useState<boolean | null>(null);
-  useEffect(() => {
-    rpc<boolean | null>('device_sn_required', { p_device_id: device.id }).then((r) => setRequired(!!r)).catch(() => setRequired(false));
-  }, [device.id]);
   const { busy, error, run } = useSubmit(() => { onSaved(); onClose(); });
-  const missing = required === true && !sn.trim();
   return (
     <Dialog title="登記到貨" onClose={onClose}>
       <div className="stack">
         <OrderHeader order={order} />
         <p className="product-name">{label}</p>
-        <SnInput label={required ? 'SN（必填）' : required === false ? 'SN（配件沒有 SN 可留空）' : 'SN'} value={sn} onChange={setSn} />
-        {required && <p className="small warn-text">此商品屬於 Mac、iPad、iPhone、Apple Watch、AirPods、HomePod，必須登記 SN。</p>}
+        <SnInput label="SN（選填，之後可補登）" value={sn} onChange={setSn} />
         <p className="small muted">可拍包裝盒標籤自動辨識，辨識後請與標籤核對。系統會檢查 SN 是否已登記在其他機器。</p>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose}>取消</button>
-          <button disabled={busy || required === null || missing}
+          <button disabled={busy}
             onClick={() => run(() => rpc('register_arrival', { p_device_id: device.id, p_expected_version: device.version, p_sn: sn.trim() || null }))}>
-            {busy ? '登記中…' : sn.trim() || required ? '確認到貨' : '確認到貨（無 SN）'}
+            {busy ? '登記中…' : sn.trim() ? '確認到貨' : '確認到貨（無 SN）'}
           </button>
         </div>
       </div>
@@ -250,6 +243,98 @@ export function CorrectSnDialog({ device, label, order, onClose, onSaved }: Prop
           <button disabled={busy || !sn.trim() || sn.trim() === device.sn || !reason.trim()}
             onClick={() => run(() => rpc('correct_sn', { p_device_id: device.id, p_expected_version: device.version, p_sn: sn, p_reason: reason.trim() }))}>
             {busy ? '儲存中…' : '更正'}
+          </button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+// 批次作業（待辦清單勾選後）：逐筆送出，某一筆失敗不影響其他筆；每筆照常留下自己的異動紀錄
+export const BATCH_LIMIT = 50;
+export type BatchKind = 'arrival' | 'label' | 'notify';
+// arrival、label 每台一筆；notify 每張訂單一筆（同訂單的機器一起記錄）
+export type BatchEntry = { key: string; title: string; detail: string; devices: Device[] };
+
+const BATCH_TITLE: Record<BatchKind, string> = { arrival: '批次登記到貨', label: '批次標記已貼', notify: '批次通知顧客' };
+
+export function BatchDialog({ kind, entries, onClose, onSaved }: {
+  kind: BatchKind; entries: BatchEntry[]; onClose: () => void; onSaved: () => void;
+}) {
+  const [method, setMethod] = useState('sms');
+  const [outcome, setOutcome] = useState('contacted');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Record<string, string>>({});   // key → 'ok' 或錯誤訊息
+  const units = entries.reduce((n, e) => n + e.devices.length, 0);
+  const pending = entries.filter((e) => result[e.key] !== 'ok');
+  const failed = entries.filter((e) => result[e.key] && result[e.key] !== 'ok').length;
+
+  async function runOne(e: BatchEntry) {
+    if (kind === 'notify') {
+      await rpc('record_notification', { p_device_ids: e.devices.map((d) => d.id), p_method: method, p_outcome: outcome, p_note: note.trim() || null });
+    } else {
+      const d = e.devices[0];
+      await rpc(kind === 'arrival' ? 'register_arrival' : 'set_labeled', kind === 'arrival'
+        ? { p_device_id: d.id, p_expected_version: d.version, p_sn: null }
+        : { p_device_id: d.id, p_expected_version: d.version, p_labeled: true });
+    }
+  }
+
+  async function runAll() {
+    setBusy(true);
+    const next = { ...result };
+    for (const e of pending) {
+      try {
+        await runOne(e);
+        next[e.key] = 'ok';
+      } catch (err) {
+        next[e.key] = errorMessage(err);
+      }
+      setResult({ ...next });
+    }
+    setBusy(false);
+    onSaved();
+    if (entries.every((e) => next[e.key] === 'ok')) onClose();
+  }
+
+  return (
+    <Dialog title={BATCH_TITLE[kind]} onClose={onClose}>
+      <div className="stack">
+        <p>即將為 <b>{kind === 'notify' ? `${entries.length} 張訂單（${units} 台）` : `${units} 台`}</b>
+          {kind === 'arrival' ? '登記到貨（不登記 SN，之後可補登）' : kind === 'label' ? '標記已貼' : '記錄通知'}：</p>
+        <ul className="plain small batch-list">
+          {entries.map((e) => (
+            <li key={e.key}>
+              <b>{e.title}</b>　{e.detail}
+              {result[e.key] === 'ok' && <span className="ok-text">　✓ 完成</span>}
+              {result[e.key] && result[e.key] !== 'ok' && <div className="error-text">✗ {result[e.key]}</div>}
+            </li>
+          ))}
+        </ul>
+        {kind === 'notify' && (
+          <>
+            <div className="grid2">
+              <label>方式
+                <select value={method} onChange={(ev) => setMethod(ev.target.value)} disabled={busy}>
+                  {Object.entries(METHOD_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+              <label>結果
+                <select value={outcome} onChange={(ev) => setOutcome(ev.target.value)} disabled={busy}>
+                  {Object.entries(OUTCOME_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+            </div>
+            <label>備註（套用到每一張）<input value={note} onChange={(ev) => setNote(ev.target.value)} disabled={busy} /></label>
+            <p className="small muted">同一種方式與結果套用到所有勾選的訂單，適合群發簡訊或 LINE；逐一打電話時請單筆記錄。</p>
+          </>
+        )}
+        {failed > 0 && !busy && <div className="alert error">有 {failed} 筆沒有完成（原因如上），其他已完成。可修正後按「重送未完成的」。</div>}
+        <div className="row gap end">
+          <button className="secondary" onClick={onClose} disabled={busy}>{Object.keys(result).length ? '關閉' : '取消'}</button>
+          <button disabled={busy || !pending.length} onClick={runAll}>
+            {busy ? '處理中…' : failed ? `重送未完成的（${pending.length}）` : `確認（${kind === 'notify' ? `${entries.length} 張` : `${units} 台`}）`}
           </button>
         </div>
       </div>

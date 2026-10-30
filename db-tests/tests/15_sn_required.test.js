@@ -1,4 +1,4 @@
-// 主要商品（Mac、iPad、iPhone、Apple Watch、AirPods、HomePod）到貨必須登記 SN；配件可留空
+// 到貨 SN 一律選填（2026-10-30 起；原本 Mac、iPad、iPhone、Apple Watch、AirPods、HomePod 必填）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { freshDb, as, expectError, createOrder } from '../lib/harness.js';
@@ -9,7 +9,7 @@ const CATALOG = [
   { code: '3', product_name: '示範保護殼 DEMC1', category: 'Accy', sub_category: 'iPhone Case' },
 ];
 
-test('T140 依產品資料分類或品名判斷 SN 必填', async (t) => {
+test('T140 所有商品到貨都可以不登記 SN', async (t) => {
   const db = await freshDb(); t.after(() => db.close());
   await as(db, 'admin', 'select admin_import_catalog($1)', [JSON.stringify(CATALOG)]);
   const { order_id } = await createOrder(db, 'staffA', { items: [
@@ -23,12 +23,14 @@ test('T140 依產品資料分類或品名判斷 SN 必填', async (t) => {
     where d.order_id = $1 order by i.line_no`, [order_id]);
   const req = [];
   for (const d of devs) req.push((await as(db, 'staffA', 'select device_sn_required($1) as r', [d.id]))[0].r);
-  assert.deepEqual(req, [true, true, false, true, false]);
+  assert.deepEqual(req, [false, false, false, false, false]);
 
-  assert.equal(await expectError(as(db, 'staffA', 'select register_arrival($1, $2, null)', [devs[0].id, devs[0].version])), 'SN_REQUIRED');
-  await as(db, 'staffA', 'select register_arrival($1, $2, $3)', [devs[0].id, devs[0].version, 'CW93FPXM56']);
+  await as(db, 'staffA', 'select register_arrival($1, $2, null)', [devs[0].id, devs[0].version]);   // iPhone 也可不填
+  await as(db, 'staffA', 'select register_arrival($1, $2, $3)', [devs[1].id, devs[1].version, 'CW93FPXM56']);
   await as(db, 'staffA', 'select register_arrival($1, $2, null)', [devs[2].id, devs[2].version]);
   await as(db, 'staffA', 'select register_arrival($1, $2, null)', [devs[4].id, devs[4].version]);
+  const st = await as(db, 'staffA', 'select status, sn from devices where order_id = $1 order by id', [order_id]);
+  assert.equal(st.filter((d) => d.status === 'arrived_pending_notify').length, 4);
   // 其他門市查不到
-  assert.equal((await as(db, 'staffB', 'select device_sn_required($1) as r', [devs[1].id]))[0].r, null);
+  assert.equal((await as(db, 'staffB', 'select device_sn_required($1) as r', [devs[3].id]))[0].r, null);
 });

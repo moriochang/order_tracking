@@ -150,7 +150,7 @@
   <p>列出最近 10 張訂單，<b>每一台機器各佔一行</b>，右邊的「操作」欄只顯示這一台目前能做的下一步：</p>
   <table>
     <tr><th style="width:26%">按鈕</th><th>出現時機</th><th>按下後</th></tr>
-    <tr><td><span class="btn b-arrival">登記到貨</span></td><td>待到貨</td><td>開啟登記視窗，輸入或拍照辨識 SN</td></tr>
+    <tr><td><span class="btn b-arrival">登記到貨</span></td><td>待到貨</td><td>開啟登記視窗，可輸入或拍照辨識 SN（選填）</td></tr>
     <tr><td><span class="btn b-label">已貼</span></td><td>已到貨、還沒貼標</td><td>直接標記已貼</td></tr>
     <tr><td><span class="btn b-notify">通知顧客</span></td><td>已到貨</td><td>記錄通知方式與結果</td></tr>
     <tr><td><span class="btn b-deliver">完成取貨</span></td><td>已通知</td><td>確認取貨，可填取貨備註</td></tr>
@@ -243,11 +243,10 @@
   <h2>5. 到貨後的處理流程</h2>
   <div class="card">
     <div class="title"><span class="num">1</span>登記到貨與 SN</div>
-    <p>按 <span class="btn b-arrival">登記到貨</span>，輸入 SN，或按「<b>拍照辨識</b>」拍包裝盒標籤，系統會讀取「(S) Serial No.」後面的值。</p>
+    <p>按 <span class="btn b-arrival">登記到貨</span>。要登記 SN 時，輸入 SN，或按「<b>拍照辨識</b>」拍包裝盒標籤，系統會讀取「(S) Serial No.」後面的值。</p>
     <ul class="small">
       <li>SN 一般為 10–12 碼英數字；英文 O、I 會自動改成數字 0、1。</li>
-      <li><b>Mac、iPad、iPhone、Apple Watch、AirPods、HomePod 必須登記 SN</b>，沒填無法確認到貨。</li>
-      <li>配件等其他商品沒有 SN 可以留空，按「確認到貨（無 SN）」。之後可在 SN 欄按「補登」。</li>
+      <li><b>SN 是選填</b>：不填也可以按「確認到貨（無 SN）」，之後可在訂單詳細頁的 SN 欄按「補登」。</li>
       <li>同一個 SN 不能登記在兩台機器上。</li>
     </ul>
   </div>
@@ -265,7 +264,7 @@
 <!-- 6 取貨流程 -->
 <section>
   <h2>6. 取貨流程</h2>
-  <p>只有已登記到貨（SN 那一步完成）的機器才能完成取貨。</p>
+  <p>只有已登記到貨的機器才能完成取貨。</p>
   <div class="card">
     <div class="title"><span class="num">1</span>找到訂單</div>
     <p>在<b>訂單查詢</b>輸入顧客姓名、電話或訂單編號；或到<b>待辦清單</b>的「待取貨」分頁找。</p>
@@ -287,7 +286,7 @@
     <tr><th style="width:30%">情況</th><th>處理方式</th></tr>
     <tr><td>同一張單取多台</td><td>取貨視窗會列出這張單其他已到貨的機器，勾選後<b>一次全部完成取貨</b>。</td></tr>
     <tr><td>還沒通知，顧客就到店</td><td>一樣按 <span class="btn b-deliver">完成取貨</span>，系統會自動補記一筆「顧客到店」通知。</td></tr>
-    <tr><td>還沒登記到貨</td><td>先按 <span class="btn b-arrival">登記到貨</span> 輸入 SN，再完成取貨。</td></tr>
+    <tr><td>還沒登記到貨</td><td>先按 <span class="btn b-arrival">登記到貨</span>，再完成取貨。</td></tr>
     <tr><td>寄送</td><td>寄出後按「完成取貨」，在取貨備註輸入<b>黑貓單號</b>（收件資料寫在訂單備註）。</td></tr>
     <tr><td>按錯完成取貨</td><td>在該台按「更正狀態」退回「已通知」，填寫原因。</td></tr>
   </table>
@@ -323,6 +322,19 @@
     <tr><td><span class="btn b-pickup">待取貨</span></td><td>已通知、顧客尚未取貨。<b>同一張訂單合併成一列</b>，按「完成取貨」會一次勾選這張單所有待取貨的機器</td><td>通知時間由舊到新；<b class="warn">超過 14 天整列標紅</b></td></tr>
   </table>
   <div class="tip">貨到了：在篩選欄輸入型號（例：MD3Y4），切到「待到貨」，從最上面依序登記，就是先訂先給的順序。</div>
+  <h3>批次處理（大量到貨時）</h3>
+  <p>「待到貨」「待通知」「待貼」分頁的每一列前面有勾選框，最上面的勾選框是全選。勾選後畫面下方出現操作列，按按鈕、確認清單後送出。</p>
+  <table>
+    <tr><th style="width:22%">分頁</th><th style="width:26%">按鈕</th><th>說明</th></tr>
+    <tr><td>待到貨</td><td><span class="btn b-arrival">批次登記到貨</span></td><td>勾選的機器一次登記到貨，<b>不登記 SN</b>（需要時之後補登）</td></tr>
+    <tr><td>待通知</td><td><span class="btn b-notify">批次通知顧客</span></td><td>以訂單為單位，選一次方式與結果，套用到所有勾選的訂單；適合群發簡訊、LINE。逐一打電話時請單筆記錄</td></tr>
+    <tr><td>待貼</td><td><span class="btn b-label">批次標記已貼</span></td><td>勾選的機器一次標記已貼</td></tr>
+  </table>
+  <ul>
+    <li>一次最多 50 台（通知為 50 張訂單）。先用型號篩選，再按全選最方便。</li>
+    <li>每一台都會照常留下自己的異動紀錄。某一筆失敗（例如別人剛處理過）不影響其他筆，畫面會標出失敗原因，可按「重送未完成的」。</li>
+    <li>批次送錯時，到訂單詳細頁用「更正狀態」逐台退回。</li>
+  </ul>
 </section>
 
 

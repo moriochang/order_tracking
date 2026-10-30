@@ -1,12 +1,13 @@
 // 待辦清單：依「該做的下一步」分頁列出每台機器，最久的排最前面，直接在列上操作。
-import { useState, type FormEvent } from 'react';
+// 待到貨、待通知、待貼分頁可勾選多列批次處理（一次最多 BATCH_LIMIT 台／張）。
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
 import { listTodo, rpc } from '../lib/api';
 import { fmtDate, todayTaipei } from '../lib/format';
 import { canEdit } from '../lib/labels';
 import type { Device, TodoRow } from '../lib/types';
-import { ArrivalDialog, DeliveryDialog, NotifyDialog, notesOf } from '../components/DeviceDialogs';
+import { ArrivalDialog, BATCH_LIMIT, BatchDialog, DeliveryDialog, NotifyDialog, notesOf, type BatchKind } from '../components/DeviceDialogs';
 import { ErrorBanner, StatusBadge, useAsync } from '../components/ui';
 
 const PICKUP_OVERDUE_DAYS = 14;   // 通知後超過幾天未取貨標紅
@@ -14,14 +15,22 @@ const PICKUP_OVERDUE_DAYS = 14;   // 通知後超過幾天未取貨標紅
 type TabKey = 'all' | 'arrival' | 'notify' | 'label' | 'pickup';
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: 'all', label: '全部', hint: '所有尚未完成的機器，依結帳日期由舊到新。' },
-  { key: 'arrival', label: '待到貨', hint: '依結帳日期由舊到新，先訂的先給。' },
-  { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。同一張訂單合併成一列，一次通知。' },
-  { key: 'label', label: '待貼', hint: '已到貨、尚未貼標留貨的機器。' },
+  { key: 'arrival', label: '待到貨', hint: '依結帳日期由舊到新，先訂的先給。可勾選多台批次登記到貨。' },
+  { key: 'notify', label: '待通知', hint: '已到貨、尚未聯絡顧客，依到貨時間排序。同一張訂單合併成一列，一次通知；可勾選多張批次通知。' },
+  { key: 'label', label: '待貼', hint: '已到貨、尚未貼標留貨的機器。可勾選多台批次標記已貼。' },
   { key: 'pickup', label: '待取貨', hint: `已通知、顧客尚未取貨，依通知時間排序；超過 ${PICKUP_OVERDUE_DAYS} 天標紅。同一張訂單合併成一列，一次取貨。` },
 ];
 
 // 通知與取貨是對顧客、以訂單為單位：同一張訂單合併成一列；其他分頁每台一列
 const byOrder = (tab: TabKey) => tab === 'notify' || tab === 'pickup';
+
+const BATCH_OF: Partial<Record<TabKey, { kind: BatchKind; label: string }>> = {
+  arrival: { kind: 'arrival', label: '批次登記到貨' },
+  notify: { kind: 'notify', label: '批次通知顧客' },
+  label: { kind: 'label', label: '批次標記已貼' },
+};
+// 每列的勾選代號：通知以訂單為單位，其他每台一列
+const groupKey = (g: TodoRow[], tab: TabKey) => (byOrder(tab) ? g[0].order_id : g[0].device_id);
 
 function groupRows(rows: TodoRow[], tab: TabKey): TodoRow[][] {
   if (!byOrder(tab)) return rows.map((r) => [r]);
@@ -70,6 +79,9 @@ export function TodoPage() {
   // ids：合併列一起處理的機器，對話框預設全部勾選
   const [action, setAction] = useState<{ kind: 'arrival' | 'notify' | 'deliver'; row: TodoRow; ids?: string[] } | null>(null);
   const [opError, setOpError] = useState<unknown>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [batchOpen, setBatchOpen] = useState(false);
+  useEffect(() => setPicked([]), [tab, store, q]);
   const setParam = (k: string, v: string) => setParams((p) => { if (v) p.set(k, v); else p.delete(k); return p; });
 
   const all = data.data ?? [];
@@ -80,6 +92,11 @@ export function TodoPage() {
     const inT = all.filter((r) => inTab(r, t));
     return byOrder(t) ? new Set(inT.map((r) => r.order_id)).size : inT.length;
   };
+  const batch = editable ? BATCH_OF[tab] : undefined;
+  const keys = groups.map((g) => groupKey(g, tab));
+  const pickedGroups = groups.filter((g) => picked.includes(groupKey(g, tab)));
+  const togglePick = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : p.length >= BATCH_LIMIT ? p : [...p, k]));
+  const allPicked = keys.length > 0 && keys.slice(0, BATCH_LIMIT).every((k) => picked.includes(k));
   const label = (r: TodoRow) => `${r.full_product_name}${r.sn ? `（${r.sn}）` : ''}`;
   const orderOf = (r: TodoRow) => ({ no: r.order_no, customer: r.customer_name, phone: r.customer_phone });
 
@@ -129,6 +146,10 @@ export function TodoPage() {
           <table className="list">
             <thead>
               <tr>
+                {batch && <th className="check-col">
+                  <input type="checkbox" aria-label="全選" checked={allPicked}
+                    onChange={() => setPicked(allPicked ? [] : keys.slice(0, BATCH_LIMIT))} />
+                </th>}
                 <th>{tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'}</th><th>等待時間</th>
                 <th>訂單編號</th><th>顧客</th><th>電話</th><th>品名</th><th>SN</th><th>狀態</th>{editable && <th>操作</th>}
               </tr>
@@ -142,6 +163,9 @@ export function TodoPage() {
                 const overdue = tab === 'pickup' && days > PICKUP_OVERDUE_DAYS;
                 return (
                   <tr key={r.device_id} className={overdue ? 'overdue' : ''}>
+                    {batch && <td data-label="" className="check-col">
+                      <input type="checkbox" aria-label="勾選" checked={picked.includes(groupKey(g, tab))} onChange={() => togglePick(groupKey(g, tab))} />
+                    </td>}
                     <td data-label={tab === 'arrival' || tab === 'all' ? '結帳日期' : tab === 'pickup' ? '通知時間' : '到貨時間'} className="nowrap">
                       {start ? fmtDate(taipeiDay(start)) : '—'}
                     </td>
@@ -182,6 +206,25 @@ export function TodoPage() {
           </table>
         </div>
       ))}
+
+      {batch && picked.length > 0 && (
+        <div className="batch-bar">
+          <span>已勾選 {byOrder(tab) ? `${pickedGroups.length} 張訂單（${pickedGroups.flat().length} 台）` : `${pickedGroups.length} 台`}
+            {picked.length >= BATCH_LIMIT && <span className="small muted">（一次最多 {BATCH_LIMIT}）</span>}</span>
+          <span className="grow" />
+          <button type="button" className="secondary" onClick={() => setPicked([])}>取消勾選</button>
+          <button type="button" onClick={() => setBatchOpen(true)}>{batch.label}</button>
+        </div>
+      )}
+      {batch && batchOpen && (
+        <BatchDialog kind={batch.kind} onClose={() => { setBatchOpen(false); setPicked([]); }} onSaved={data.reload}
+          entries={pickedGroups.map((g) => ({
+            key: groupKey(g, tab),
+            title: `${g[0].order_no} ${g[0].customer_name}`,
+            detail: g.map((x) => x.full_product_name).join('、'),
+            devices: g.map(toDevice),
+          }))} />
+      )}
 
       {action?.kind === 'arrival' && (
         <ArrivalDialog device={toDevice(action.row)} label={label(action.row)} order={orderOf(action.row)} onClose={() => setAction(null)} onSaved={data.reload} />
