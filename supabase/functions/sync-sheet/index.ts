@@ -1,6 +1,7 @@
 // sync-sheet：把全部訂單整份寫入 Google 試算表（欄位與網頁「匯出」報表相同，每台單機一列）。
 // 由 Supabase Cron 每 10 分鐘呼叫（scripts/sheet-sync/schedule.sql）；單向同步，試算表上的修改會在下次同步被覆蓋。
 // 每次整份重寫：某次失敗時，下一次會補齊。先寫新資料、再清掉多出來的舊列，同步中不會看到空白表。
+// 每天 22:00 另以 {"mode":"verify"} 呼叫：先比對資料庫與試算表、把結果記在「每日核對」分頁，再重新同步。
 // 為了能直接在 Supabase Dashboard 貼上部署，本檔不依賴其他檔案（Google token 程式與 ocr-receipt 相同）。
 //
 // 需要的 secrets：
@@ -24,6 +25,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const DATA_TAB = '預購訂單';
 const INFO_TAB = '同步時間';
+const CHECK_TAB = '每日核對';
+const CHECK_HEADER = ['核對時間', '系統列數', '試算表列數', '結果', '不同的訂單編號（最多 20 筆）', '處理'];
 
 // 與 web/src/lib/exportOrders.ts、labels.ts 相同
 const HEADER = ['訂單編號', '門市', '顧客', '電話', '結帳日期', '機號', '序號', '預結號碼', '品名', '型號', '國際條碼',
@@ -45,8 +48,6 @@ const dateTime = new Intl.DateTimeFormat('zh-TW', {
 const fmtDateTime = (iso: string | null) => (iso ? dateTime.format(new Date(iso)) : '');
 const fmtDate = (d: string | null) => (d ? d.replaceAll('-', '/') : '');
 
-// 試算表公式注入：= + - @ 開頭的文字前加 '（與匯出 CSV 相同）
-const safe = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v);
 
 // ── Google 服務帳戶 → OAuth access token ─────────────────────
 function b64url(data: Uint8Array | string): string {
@@ -125,7 +126,7 @@ async function buildRows(): Promise<string[][]> {
         d.note ?? '', o.order_note ?? '']);
     }
   }
-  return rows.map((r) => r.map((v) => safe(String(v ?? ''))));
+  return rows.map((r) => r.map((v) => String(v ?? '')));
 }
 
 // ── Google 試算表 ─────────────────────────────────────────
@@ -140,31 +141,55 @@ async function sheets(token: string, sheetId: string, path: string, method: stri
   return json;
 }
 
-async function writeSheet(rows: string[][]) {
+const tab = (t: string) => `'${t}'`;
+
+async function openSheet() {
   const sheetId = Deno.env.get('SHEET_ID');
   const sa: ServiceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') ?? 'null');
   if (!sheetId || !sa?.private_key) throw new HttpError(500, 'SERVER_NOT_CONFIGURED');
   const token = await googleAccessToken(sa);
+  const call = (path: string, method: string, body?: unknown) => sheets(token, sheetId, path, method, body);
 
-  // 第一次同步時建立兩個分頁
-  const meta = await sheets(token, sheetId, '?fields=sheets.properties.title', 'GET');
+  // 第一次使用時建立分頁
+  const meta = await call('?fields=sheets.properties.title', 'GET');
   const titles = new Set((meta.sheets ?? []).map((s: { properties: { title: string } }) => s.properties.title));
-  const add = [DATA_TAB, INFO_TAB].filter((t) => !titles.has(t)).map((title) => ({ addSheet: { properties: { title } } }));
-  if (add.length) await sheets(token, sheetId, ':batchUpdate', 'POST', { requests: add });
+  const add = [DATA_TAB, INFO_TAB, CHECK_TAB].filter((t) => !titles.has(t)).map((title) => ({ addSheet: { properties: { title } } }));
+  if (add.length) await call(':batchUpdate', 'POST', { requests: add });
+  if (!titles.has(CHECK_TAB)) {
+    await call(`/values/${encodeURIComponent(`${tab(CHECK_TAB)}!A1`)}?valueInputOption=RAW`, 'PUT', { values: [CHECK_HEADER] });
+  }
+  return call;
+}
 
-  const tab = (t: string) => `'${t}'`;
-  await sheets(token, sheetId, '/values:batchUpdate', 'POST', {
-    valueInputOption: 'RAW',  // 一律當文字：機號、電話開頭的 0 與國際條碼不會被改掉
+type SheetCall = Awaited<ReturnType<typeof openSheet>>;
+
+async function writeSheet(call: SheetCall, rows: string[][]) {
+  await call('/values:batchUpdate', 'POST', {
+    valueInputOption: 'RAW',  // 一律當文字：機號、電話開頭的 0 與國際條碼不會被改掉，= 開頭也不會變成公式
     data: [
       { range: `${tab(DATA_TAB)}!A1`, values: rows },
       { range: `${tab(INFO_TAB)}!A1`, values: [
         ['最後同步', fmtDateTime(new Date().toISOString())],
         ['列數', String(rows.length - 1)],
-        ['說明', '由預購商品追蹤系統每 10 分鐘自動更新；在這裡修改會被覆蓋，請到系統修改。'],
+        ['說明', '由預購商品追蹤系統每 10 分鐘自動更新；在這裡修改會被覆蓋，請到系統修改。每天 22:00 核對一次，結果在「每日核對」分頁。'],
       ] },
     ],
   });
-  await sheets(token, sheetId, `/values/${encodeURIComponent(`${tab(DATA_TAB)}!A${rows.length + 1}:Z`)}:clear`, 'POST', {});
+  await call(`/values/${encodeURIComponent(`${tab(DATA_TAB)}!A${rows.length + 1}:Z`)}:clear`, 'POST', {});
+}
+
+// 每日核對：逐列比對（同一內容出現幾次也要相同），回傳不同的訂單編號
+async function compareSheet(call: SheetCall, rows: string[][]) {
+  const got = await call(`/values/${encodeURIComponent(`${tab(DATA_TAB)}!A1:Z`)}`, 'GET');
+  const width = HEADER.length;
+  const norm = (r: unknown[]) => JSON.stringify(Array.from({ length: width }, (_, i) => String(r[i] ?? '')));
+  const sheetRows: unknown[][] = (got.values ?? []).filter((r: unknown[]) => r.some((v) => String(v ?? '') !== ''));
+  const count = new Map<string, number>();
+  for (const r of rows) count.set(norm(r), (count.get(norm(r)) ?? 0) + 1);
+  for (const r of sheetRows) count.set(norm(r), (count.get(norm(r)) ?? 0) - 1);
+  const diff = new Set<string>();
+  for (const [k, n] of count) if (n !== 0) diff.add(JSON.parse(k)[0] || '（空白訂單編號）');
+  return { sheetRows: sheetRows.length - 1, diff: [...diff].sort() };
 }
 
 Deno.serve(async (req) => {
@@ -174,11 +199,23 @@ Deno.serve(async (req) => {
     if (req.method !== 'POST') throw new HttpError(405, 'METHOD_NOT_ALLOWED');
     const secret = Deno.env.get('SYNC_SECRET');
     if (!secret || req.headers.get('x-sync-secret') !== secret) throw new HttpError(401, 'UNAUTHENTICATED');
+    const verify = (await req.json().catch(() => null))?.mode === 'verify';
     const t0 = Date.now();
     const rows = await buildRows();
-    await writeSheet(rows);
-    console.log('sync-sheet', `${rows.length - 1} rows`, `${Date.now() - t0}ms`);
-    return reply(200, { rows: rows.length - 1 });
+    const call = await openSheet();
+
+    let check = null;
+    if (verify) {
+      check = await compareSheet(call, rows);
+      const ok = check.diff.length === 0;
+      await call(`/values/${encodeURIComponent(`${tab(CHECK_TAB)}!A1`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, 'POST', {
+        values: [[fmtDateTime(new Date().toISOString()), String(rows.length - 1), String(check.sheetRows),
+          ok ? '一致' : `有 ${check.diff.length} 張訂單不同`, check.diff.slice(0, 20).join('、'), ok ? '' : '已重新同步']],
+      });
+    }
+    await writeSheet(call, rows);
+    console.log('sync-sheet', verify ? 'verify' : 'sync', `${rows.length - 1} rows`, check ? `diff ${check.diff.length}` : '', `${Date.now() - t0}ms`);
+    return reply(200, { rows: rows.length - 1, ...(check ? { sheet_rows: check.sheetRows, diff: check.diff.length } : {}) });
   } catch (e) {
     if (e instanceof HttpError) {
       console.error('sync-sheet', e.code, e.detail);
