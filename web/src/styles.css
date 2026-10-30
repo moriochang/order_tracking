@@ -92,6 +92,7 @@ button, .button {
 }
 button.secondary, .button.secondary { background: var(--surface); color: var(--primary); }
 button.danger { background: var(--danger); border-color: var(--danger); }
+button.confirm { background: #248a3d; border-color: #248a3d; color: #fff; }   /* 確認送出（建立訂單、確認取貨）：與「完成取貨」同一個綠色 */
 button.link { background: none; border: none; color: var(--primary); padding: 4px; min-height: auto; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 .small-btn { padding: 4px 10px; min-height: 32px; font-size: 0.85rem; }

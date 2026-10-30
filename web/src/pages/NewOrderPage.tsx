@@ -305,7 +305,7 @@ export function NewOrderPage() {
           <ErrorBanner error={error} />
           <div className="row gap end">
             <button type="button" className="secondary" onClick={() => navigate('/')}>取消</button>
-            <button type="button" disabled={busy} onClick={review}>{busy ? '檢查中…' : '建立訂單'}</button>
+            <button type="button" className="confirm" disabled={busy} onClick={review}>{busy ? '檢查中…' : '建立訂單'}</button>
           </div>
         </aside>
       </div>
@@ -356,7 +356,7 @@ export function NewOrderPage() {
             <ErrorBanner error={error} />
             <div className="row gap end">
               <button className="secondary" onClick={() => setConfirming(false)}>返回</button>
-              <button disabled={busy} onClick={create}>{busy ? '建立中…' : '確認建立'}</button>
+              <button className="confirm" disabled={busy} onClick={create}>{busy ? '建立中…' : '確認建立'}</button>
             </div>
           </div>
         </Dialog>

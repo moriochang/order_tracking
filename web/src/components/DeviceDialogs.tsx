@@ -228,7 +228,7 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], pr
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose} disabled={busy}>取消</button>
-          <button disabled={busy || remaining === 0 || !staffOk} onClick={deliver}>
+          <button className="confirm" disabled={busy || remaining === 0 || !staffOk} onClick={deliver}>
             {busy ? '處理中…' : `確認取貨（${remaining} 台）`}
           </button>
         </div>
