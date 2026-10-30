@@ -126,6 +126,8 @@ export function parseReceiptText(text: string): ParsedReceipt {
     const qty = 1;
     if (!name) notes.push('品名未辨識');
 
+    // 中文品名和型號黏在一起（「擦拭布MLH74」）時補上空白，型號才取得到
+    name = name.replace(/([^\x00-\x7F])((?=[A-Z0-9]*[A-Z])(?=[A-Z0-9]*\d)[A-Z0-9]{4,8})$/, '$1 $2');
     const tokens = name.split(' ');
     const last = tokens[tokens.length - 1] ?? '';
     const model = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{4,8}$/.test(last) ? last : '';

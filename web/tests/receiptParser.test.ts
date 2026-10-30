@@ -139,3 +139,22 @@ test('機號：「機號」二字認錯時，從銷售日期下一行找 010–0
   assert.equal(parseReceiptText(base.replace('機號: 011', '機號: 11')).register_no, '011');
   assert.equal(parseReceiptText(base.replace('機號: 011 收銀員: A12163', '收銀員: A12163')).register_no, '');
 });
+
+test('中文品名和型號黏在一起時仍取得型號，並與同型號的行合併', () => {
+  const text = `預購明細Pre-Sale
+機號: 012 收銀員: A00001 序號: 103
+產品代碼/品名 數量 單價 點數/金額
+APPLE
+擦拭布MLH74 0點
+195951489407 1 290 290TX
+APPLE
+擦拭布 MLH74 0點
+195951489407 1 290 290TX
+APPLE
+Apple Pencil USB-C MUWA3 0點
+195949133664 1 2,690 2,690TX
+消費金額:`;
+  const r = parseReceiptText(text);
+  assert.deepEqual(r.items.map((i) => [i.full_product_name, i.model, i.qty]),
+    [['擦拭布 MLH74', 'MLH74', 2], ['Apple Pencil USB-C MUWA3', 'MUWA3', 1]]);
+});
