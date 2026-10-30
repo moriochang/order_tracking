@@ -166,6 +166,9 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], pr
   itemNote?: string | null; others?: DeliveryOther[]; preselected?: string[];
 }) {
   const [note, setNote] = useState('');
+  // 經手同仁員編：A＋5 碼數字（例：A12652），只輸入數字
+  const [staffDigits, setStaffDigits] = useState('');
+  const staffOk = /^\d{5}$/.test(staffDigits);
   const [picked, setPicked] = useState<string[]>(preselected ?? [device.id]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -179,7 +182,7 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], pr
     const ok: string[] = [...done];
     try {
       for (const o of all.filter((x) => picked.includes(x.device.id) && !ok.includes(x.device.id))) {
-        await rpc('complete_delivery', { p_device_id: o.device.id, p_expected_version: o.device.version, p_note: note.trim() || null });
+        await rpc('complete_delivery', { p_device_id: o.device.id, p_expected_version: o.device.version, p_staff_no: `A${staffDigits}`, p_note: note.trim() || null });
         ok.push(o.device.id);
         setDone([...ok]);
       }
@@ -213,11 +216,19 @@ export function DeliveryDialog({ device, label, order, itemNote, others = [], pr
           ))}
         </div>
         <p className="small muted">請與實機核對 SN；有 ⚠ 備註的請先處理再交機。</p>
+        <label className={`staff-no ${staffOk ? 'ok' : ''}`}>經手同仁員編（必填）
+          <span className="row gap staff-no-input">
+            <b>A</b>
+            <input inputMode="numeric" pattern="[0-9]*" maxLength={5} autoComplete="off" placeholder="12652" value={staffDigits}
+              disabled={busy} onChange={(e) => setStaffDigits(e.target.value.replace(/\D/g, '').slice(0, 5))} />
+          </span>
+          <span className="small">{staffOk ? `✓ A${staffDigits}` : '輸入 A 後面的 5 碼數字'}</span>
+        </label>
         <label>取貨備註（選填，套用到勾選的每一台）<input value={note} placeholder="例：本人取貨、代領人姓名、黑貓單號" onChange={(e) => setNote(e.target.value)} /></label>
         <ErrorBanner error={error} />
         <div className="row gap end">
           <button className="secondary" onClick={onClose} disabled={busy}>取消</button>
-          <button disabled={busy || remaining === 0} onClick={deliver}>
+          <button disabled={busy || remaining === 0 || !staffOk} onClick={deliver}>
             {busy ? '處理中…' : `確認取貨（${remaining} 台）`}
           </button>
         </div>

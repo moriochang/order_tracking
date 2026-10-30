@@ -139,6 +139,7 @@ export type Device = {
   exclusion_reason: string | null;
   cancellation_reason: string | null;
   delivery_note: string | null;
+  delivered_staff_no: string | null;
   note: string | null;
   version: number;
 };

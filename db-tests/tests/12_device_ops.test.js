@@ -23,9 +23,9 @@ test('T100 完整流程：到貨登記 SN → 已貼 → 通知 → 交付，每
   [d] = await devs();
   assert.deepEqual([d.status, d.is_labeled], ['notified_pending_pickup', true]);   // 有聯繫就算通知（決策）
 
-  await call(db, 'staffA', 'complete_delivery($1, $2, $3)', [d.id, d.version, '本人取貨']);
+  await call(db, 'staffA', 'complete_delivery($1, $2, $3, $4)', [d.id, d.version, ' a12652 ', '本人取貨']);
   [d] = await devs();
-  assert.deepEqual([d.status, d.delivery_note], ['delivered', '本人取貨']);
+  assert.deepEqual([d.status, d.delivery_note, d.delivered_staff_no], ['delivered', '本人取貨', 'A12652']);
 
   const actions = (await as(db, 'staffA', `select action from audit_logs where device_id = $1 and operation = 'UPDATE' order by id`, [d.id])).map((r) => r.action);
   assert.deepEqual(actions, ['register_arrival', 'set_labeled', 'record_notification', 'complete_delivery']);
@@ -38,7 +38,7 @@ test('T101 狀態不對時拒絕；版本過期拒絕；SN 不可重複', async 
   let [a, b] = await devs();
   assert.equal(await expectError(call(db, 'staffA', `record_notification($1, 'phone', 'contacted')`, [[a.id]])), 'ILLEGAL_TRANSITION');
   assert.equal(await expectError(call(db, 'staffA', 'set_labeled($1, $2, true)', [a.id, a.version])), 'LABEL_NOT_ALLOWED');
-  assert.equal(await expectError(call(db, 'staffA', 'complete_delivery($1, $2, null)', [a.id, a.version])), 'ILLEGAL_TRANSITION');
+  assert.equal(await expectError(call(db, 'staffA', `complete_delivery($1, $2, 'A12652')`, [a.id, a.version])), 'ILLEGAL_TRANSITION');
 
   await call(db, 'staffA', 'register_arrival($1, $2, $3)', [a.id, a.version, 'SN1']);
   assert.equal(await expectError(call(db, 'staffA', 'register_arrival($1, $2, $3)', [a.id, a.version, 'SN1'])), 'STATE_CHANGED');
@@ -50,7 +50,7 @@ test('T102 顧客在通知前到店：交付時自動記一筆「顧客到店」
   let [d] = await devs();
   await call(db, 'staffA', 'register_arrival($1, $2, $3)', [d.id, d.version, 'SN9']);
   [d] = await devs();
-  await call(db, 'staffA', 'complete_delivery($1, $2, null)', [d.id, d.version]);
+  await call(db, 'staffA', `complete_delivery($1, $2, 'A00001')`, [d.id, d.version]);
   [d] = await devs();
   assert.equal(d.status, 'delivered');
   const [n] = await as(db, 'staffA', 'select method, outcome from notifications where device_id = $1', [d.id]);
@@ -109,4 +109,24 @@ test('T106 SN 選填（配件）；之後可補登；英文 O、I 視為數字 0
   await call(db, 'staffA', 'register_arrival($1, $2, $3)', [b.id, b.version, 'GFM2JJNLZF']);
   [a, b] = await devs();
   assert.deepEqual([a.sn, b.sn], ['C02NQCC6FY17', 'GFM2JJNLZF']);
+});
+
+test('T104 取貨必須輸入員編（A＋5 碼數字）；更正狀態退回時清除', async (t) => {
+  const { db, devs } = await setup(1); t.after(() => db.close());
+  let [d] = await devs();
+  await call(db, 'staffA', 'register_arrival($1, $2, null)', [d.id, d.version]);
+  [d] = await devs();
+  for (const bad of [null, '', '12652', 'A1265', 'B12652', 'A126520']) {
+    assert.equal(await expectError(call(db, 'staffA', 'complete_delivery($1, $2, $3)', [d.id, d.version, bad])), 'STAFF_NO_INVALID');
+  }
+  assert.equal((await devs())[0].status, 'arrived_pending_notify');
+  await call(db, 'staffA', 'complete_delivery($1, $2, $3)', [d.id, d.version, 'A12652']);
+  [d] = await devs();
+  const [log] = await as(db, 'staffA', `select after_data from audit_logs where device_id = $1 and action = 'complete_delivery' and operation = 'UPDATE'`, [d.id]);
+  assert.equal(log.after_data.delivered_staff_no, 'A12652');
+
+  await call(db, 'staffA', `correct_device_status($1, $2, '按錯')`, [d.id, d.version]);
+  [d] = await devs();
+  assert.deepEqual([d.status, d.delivered_staff_no], ['notified_pending_pickup', null]);
+  assert.match(await expectError(as(db, 'anon', `select complete_delivery(gen_random_uuid(), 1, 'A12652')`)), /permission denied/);
 });

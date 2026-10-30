@@ -331,6 +331,11 @@ a.tile-link:hover { filter: brightness(1.06); transform: translateY(-1px); trans
 .scan-field { display: grid; grid-template-columns: 5em 1fr; align-items: center; gap: 2px 10px; }
 .scan-field > .small { grid-column: 2; }
 .scan-field.ok input, .scan-item.ok .scan-model { border-color: #248a3d; background: #f0faf3; }
+.staff-no-input { align-items: center; }
+.staff-no-input b { font-size: 1.1rem; }
+.staff-no-input input { flex: 1; letter-spacing: 0.1em; }
+.staff-no.ok input { border-color: #248a3d; background: #f0faf3; }
+.staff-no.ok > .small { color: #248a3d; }
 .scan-field.warn input, .scan-item.warn .scan-model { border-color: #c93400; background: #fff6ef; }
 .scan-field.ok > .small { color: #248a3d; }
 .scan-field.warn > .small { color: #a15c00; }

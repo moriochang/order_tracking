@@ -184,7 +184,7 @@ export function OrderDetailPage() {
                           : dev.is_labeled ? '是' : '否'}
                       </td>
                       <td data-label="到貨">{fmtDateTime(dev.arrived_at)}</td>
-                      <td data-label="取貨">{fmtDateTime(dev.delivered_at)}</td>
+                      <td data-label="取貨">{fmtDateTime(dev.delivered_at)}{dev.delivered_staff_no && <div className="small muted">經手 {dev.delivered_staff_no}</div>}</td>
                       <td data-label="下一步">
                         {!active ? '—'
                           : dev.status === 'pending_arrival' ? <button className="step step-arrival" onClick={() => setModal({ kind: 'arrival', device: dev, item: it })}>登記到貨</button>
