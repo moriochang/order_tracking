@@ -15,6 +15,6 @@ select cron.schedule('daily-mail', '30 14 * * *', $$
   insert into public.audit_logs (entity_type, entity_id, operation, action, actor_display_name, actor_db_role, after_data)
   select 'export', gen_random_uuid()::text, 'INSERT', 'export_orders', '每日自動寄送', session_user,
          jsonb_build_object('format', 'xlsx', 'orders', (select count(*) from public.orders), 'rows', coalesce(s.last_rows, 0),
-                            'filters', jsonb_build_object('寄送', 'istore.tc@istore.com.tw')))
+                            'filters', jsonb_build_object('寄送', 'istore.tc@istore.com.tw'))
   from app.sheet_sync s;
 $$);
