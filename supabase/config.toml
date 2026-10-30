@@ -12,3 +12,7 @@ verify_jwt = false
 
 [functions.ocr-receipt]
 verify_jwt = false
+
+[functions.sync-sheet]
+# 由 Cron 帶 x-sync-secret 呼叫，函式內部驗證
+verify_jwt = false
