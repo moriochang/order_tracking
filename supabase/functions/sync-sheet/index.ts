@@ -1,7 +1,7 @@
 // sync-sheet：把全部訂單整份寫入 Google 試算表（欄位與網頁「匯出」報表相同，每台單機一列）。
 // 由 Supabase Cron 每 10 分鐘呼叫（scripts/sheet-sync/schedule.sql）；單向同步，試算表上的修改會在下次同步被覆蓋。
 // 每次整份重寫：某次失敗時，下一次會補齊。先寫新資料、再清掉多出來的舊列，同步中不會看到空白表。
-// 每天 22:00 另以 {"mode":"verify"} 呼叫：先比對資料庫與試算表、把結果記在「每日核對」分頁，再重新同步。
+// 每天 22:10 另以 {"mode":"verify"} 呼叫：先比對資料庫與試算表、把結果記在「每日核對」分頁，再重新同步。
 // 為了能直接在 Supabase Dashboard 貼上部署，本檔不依賴其他檔案（Google token 程式與 ocr-receipt 相同）。
 //
 // 需要的 secrets：
@@ -171,7 +171,7 @@ async function writeSheet(call: SheetCall, rows: string[][]) {
       { range: `${tab(INFO_TAB)}!A1`, values: [
         ['最後同步', fmtDateTime(new Date().toISOString())],
         ['列數', String(rows.length - 1)],
-        ['說明', '由預購商品追蹤系統每 10 分鐘自動更新；在這裡修改會被覆蓋，請到系統修改。每天 22:00 核對一次，結果在「每日核對」分頁。'],
+        ['說明', '由預購商品追蹤系統每 10 分鐘自動更新；在這裡修改會被覆蓋，請到系統修改。每天 22:10 核對一次，結果在「每日核對」分頁。'],
       ] },
     ],
   });

@@ -1,5 +1,5 @@
 -- 每 10 分鐘（每小時的 05、15…55 分）呼叫 Edge Function sync-sheet，把訂單同步到 Google 試算表；
--- 每天 22:00（台北時間，排程用 UTC 14:00）核對資料庫與試算表，結果記在「每日核對」分頁，再重新同步。
+-- 每天 22:10（台北時間，排程用 UTC 14:10）核對資料庫與試算表，結果記在「每日核對」分頁，再重新同步。
 -- 兩個排程錯開分鐘，不會同時寫入。請在 Supabase SQL Editor 執行一次。
 -- 執行前把 <SYNC_SECRET> 換成與 Edge Function secret SYNC_SECRET 相同的值；這個值不要存進 repo。
 -- 停止同步：select cron.unschedule('sync-sheet'); select cron.unschedule('sync-sheet-verify');
@@ -20,7 +20,7 @@ select cron.schedule('sync-sheet', '5-55/10 * * * *', $$
     timeout_milliseconds := 60000)
 $$);
 
-select cron.schedule('sync-sheet-verify', '0 14 * * *', $$
+select cron.schedule('sync-sheet-verify', '10 14 * * *', $$
   select net.http_post(
     url := 'https://meavjygfqpbyiutksifl.supabase.co/functions/v1/sync-sheet',
     headers := jsonb_build_object(
