@@ -8,7 +8,7 @@
 //   FIREBASE_SERVICE_ACCOUNT  與 admin-users、ocr-receipt 共用；試算表要分享給這個服務帳戶（編輯者）
 //   SHEET_ID                  試算表網址 /d/ 與 /edit 之間那一段
 //   SYNC_SECRET               Cron 呼叫時帶的密語（x-sync-secret），與 Vault 的 sheet_sync_secret 相同
-// 平台自動提供：SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY（只用來呼叫唯讀的 sheet_sync_data()）
+// 平台自動提供：SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY（只用來呼叫唯讀的 sheet_sync_data() 與記錄同步時間的 sheet_sync_done()）
 
 type ServiceAccount = { project_id: string; client_email: string; private_key: string };
 type Order = {
@@ -192,6 +192,16 @@ async function compareSheet(call: SheetCall, rows: string[][]) {
   return { sheetRows: sheetRows.length - 1, diff: [...diff].sort() };
 }
 
+// 記下最後同步時間與列數（設定頁顯示）；失敗只記錄，不影響這次同步
+async function markDone(rows: number) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sheet_sync_done`, {
+    method: 'POST',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_rows: rows }),
+  });
+  if (!res.ok) console.error('sync-sheet markDone failed', res.status, await res.text());
+}
+
 Deno.serve(async (req) => {
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -214,6 +224,7 @@ Deno.serve(async (req) => {
       });
     }
     await writeSheet(call, rows);
+    await markDone(rows.length - 1);
     console.log('sync-sheet', verify ? 'verify' : 'sync', `${rows.length - 1} rows`, check ? `diff ${check.diff.length}` : '', `${Date.now() - t0}ms`);
     return reply(200, { rows: rows.length - 1, ...(check ? { sheet_rows: check.sheetRows, diff: check.diff.length } : {}) });
   } catch (e) {

@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMe } from '../auth/AuthProvider';
-import { devicesForOrders, itemsForOrders, rpc, searchBacklog, searchOrders, type SearchField } from '../lib/api';
-import { fmtDate, todayTaipei } from '../lib/format';
+import { devicesForOrders, getSheetLink, itemsForOrders, rpc, searchBacklog, searchOrders, type SearchField } from '../lib/api';
+import { fmtDate, fmtDateTime, todayTaipei } from '../lib/format';
 import { exportCsv, exportXlsx } from '../lib/exportOrders';
 import { ORDER_STATUS_LABEL, canEdit, canExport } from '../lib/labels';
 import type { BacklogRow, Device, OrderSummary } from '../lib/types';
@@ -59,6 +59,7 @@ function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Recor
   const allowed = canExport(me.role);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const sheet = useAsync(() => (allowed ? getSheetLink() : Promise.resolve(null)), [allowed]);
   const log = (format: 'xlsx' | 'csv', rows: number) =>
     rpc('log_export', { p_format: format, p_orders: orders.length, p_rows: rows, p_filters: filters });
   async function run(fn: typeof exportXlsx) {
@@ -74,6 +75,10 @@ function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Recor
             {busy ? '匯出中…' : '匯出 Excel'}
           </button>
           <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportCsv)}>匯出 CSV</button>
+          {sheet.data?.url && (
+            <a className="button secondary small-btn" href={sheet.data.url} target="_blank" rel="noreferrer"
+              title={sheet.data.last_synced_at ? `最後同步 ${fmtDateTime(sheet.data.last_synced_at)}` : undefined}>開啟 Google 試算表</a>
+          )}
         </div>}
       </div>
       <ErrorBanner error={error} />

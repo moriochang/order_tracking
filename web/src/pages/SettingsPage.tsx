@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth, useMe } from '../auth/AuthProvider';
 import { ALLOWED_EMAIL_DOMAIN } from '../lib/clients';
-import { adminCreateUser, catalogCount, listAdminAudit, listExportLogs, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
+import { adminCreateUser, catalogCount, getSheetLink, listAdminAudit, listExportLogs, listProfiles, listStores, listUserStores, rpc } from '../lib/api';
 import { fmtDateTime } from '../lib/format';
 import { ACTION_LABEL, EXTERNAL_ROLES, FIELD_LABEL, ROLE_LABEL, errorMessage } from '../lib/labels';
 import type { Profile, Role, Store } from '../lib/types';
@@ -24,6 +24,7 @@ export function SettingsPage() {
       <StoresSection stores={stores.data ?? []} error={stores.error} onSaved={reloadAll} />
       <UsersSection users={users.data ?? []} stores={stores.data ?? []} error={users.error} onSaved={reloadAll} />
       <CatalogSection onSaved={reloadAll} />
+      <SheetSection onSaved={reloadAll} />
       <ExportLogSection />
       <section className="card stack">
         <h2>帳號與門市異動紀錄（最近 10 筆）</h2>
@@ -376,6 +377,53 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+// Google 試算表：網址存在資料庫（不寫進公開的程式碼）；能匯出的人在「訂單查詢」看到開啟按鈕
+function SheetSection({ onSaved }: { onSaved: () => void }) {
+  const link = useAsync(getSheetLink, []);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [done, setDone] = useState('');
+  const value = url ?? link.data?.url ?? '';
+  const minutesAgo = link.data?.last_synced_at ? Math.round((Date.now() - Date.parse(link.data.last_synced_at)) / 60000) : null;
+
+  async function save() {
+    setBusy(true); setError(null); setDone('');
+    try {
+      await rpc('admin_set_sheet_link', { p_url: value.trim() || null });
+      setDone(value.trim() ? '已儲存' : '已清除，訂單查詢不再顯示按鈕');
+      setUrl(null);
+      link.reload();
+      onSaved();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card stack">
+      <h2>Google 試算表同步</h2>
+      <p className="small muted">
+        訂單每 10 分鐘自動同步到 Google 試算表（欄位與匯出相同），每天 22:10 核對一次。
+        填入網址後，門市檢視、主管、管理者在「訂單查詢」會看到「開啟 Google 試算表」；能不能打開仍由試算表的共用名單決定。
+      </p>
+      <div className="small">
+        最後同步：{link.data?.last_synced_at ? `${fmtDateTime(link.data.last_synced_at)}（${link.data.last_rows ?? 0} 列）` : '尚無紀錄'}
+        {minutesAgo !== null && minutesAgo > 30 && <span className="error-text">　⚠ 已超過 30 分鐘沒有同步，請檢查</span>}
+      </div>
+      <div className="row gap">
+        <input className="grow" aria-label="試算表網址" placeholder="https://docs.google.com/spreadsheets/d/…" value={value}
+          onChange={(e) => setUrl(e.target.value)} />
+        <button onClick={save} disabled={busy || url === null}>{busy ? '儲存中…' : '儲存'}</button>
+      </div>
+      <ErrorBanner error={error ?? link.error} />
+      {done && <div className="alert info">{done}</div>}
     </section>
   );
 }

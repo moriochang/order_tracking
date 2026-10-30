@@ -47,6 +47,7 @@ export const ACTION_LABEL: Record<string, string> = {
   bootstrap_admin: '建立第一位管理者',
   system_migration: '系統調整',
   admin_import_catalog: '匯入產品資料',
+  admin_set_sheet_link: '設定試算表網址',
   update_device_note: '單機備註',
   export_orders: '匯出訂單',
   reset_test_data: '清除測試資料',
@@ -54,6 +55,7 @@ export const ACTION_LABEL: Record<string, string> = {
 };
 
 export const FIELD_LABEL: Record<string, string> = {
+  sheet_url: '試算表網址',
   customer_name: '顧客姓名',
   customer_phone: '電話',
   customer_code: '顧客編號',

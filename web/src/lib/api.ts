@@ -179,6 +179,12 @@ export async function catalogByEan(gtin14: string) {
   return unwrap(await supabase.from('product_catalog').select('product_name, model').eq('ean', gtin14)) as CatalogEntry[];
 }
 
+// Google 試算表連結與最後同步時間（只有能匯出的人取得得到；網址不寫在公開的程式碼裡）
+export type SheetLink = { url: string | null; last_synced_at: string | null; last_rows: number | null };
+export async function getSheetLink() {
+  return rpc<SheetLink>('get_sheet_link', {});
+}
+
 export async function catalogCount() {
   const { count, error } = await supabase.from('product_catalog').select('code', { count: 'exact', head: true });
   if (error) throw new ApiError(error.message);
