@@ -14,7 +14,7 @@ export function SettingsPage() {
     const [profiles, links] = await Promise.all([listProfiles(), listUserStores()]);
     return profiles.map((p) => ({ ...p, stores: links.filter((l) => l.user_id === p.user_id).map((l) => l.store_code) }));
   }, []);
-  const audit = useAsync(() => listAdminAudit(50), []);
+  const audit = useAsync(() => listAdminAudit(10), []);
   const { refresh } = useAuth();
   const reloadAll = () => { stores.reload(); users.reload(); audit.reload(); refresh(); };
 
@@ -26,7 +26,7 @@ export function SettingsPage() {
       <CatalogSection onSaved={reloadAll} />
       <ExportLogSection />
       <section className="card stack">
-        <h2>帳號與門市異動紀錄（最近 50 筆）</h2>
+        <h2>帳號與門市異動紀錄（最近 10 筆）</h2>
         <ErrorBanner error={audit.error} />
         <ul className="plain small">
           {(audit.data ?? []).map((l) => (
@@ -380,12 +380,12 @@ function CatalogSection({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-// 匯出紀錄（只有管理者看得到；紀錄不可修改）
+// 匯出紀錄（只有管理者看得到；紀錄不可修改；顯示最近 10 筆）
 function ExportLogSection() {
-  const logs = useAsync(() => listExportLogs(100), []);
+  const logs = useAsync(() => listExportLogs(10), []);
   return (
     <section className="card stack">
-      <h2>匯出紀錄（最近 100 筆）</h2>
+      <h2>匯出紀錄（最近 10 筆）</h2>
       <ErrorBanner error={logs.error} />
       {logs.data?.length === 0 && <p className="muted">尚無匯出紀錄。</p>}
       <ul className="plain small">
