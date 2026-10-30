@@ -89,3 +89,8 @@ function authorize() {
   SpreadsheetApp.getActive().getName();
   MailApp.getRemainingDailyQuota();
 }
+
+// 測試用：在編輯器選這個函式按「執行」，寄一封備份異常通知的範例信（標題標明「測試」）
+function testBackupAlert() {
+  alertBackup('（測試）今天沒有資料庫備份', '這是測試信，備份實際上是正常的。\n雲端硬碟裡找不到今天 03:00 的備份時，會收到像這樣的通知。');
+}
