@@ -180,7 +180,10 @@ export async function catalogByEan(gtin14: string) {
 }
 
 // Google 試算表連結與最後同步時間（只有能匯出的人取得得到；網址不寫在公開的程式碼裡）
-export type SheetLink = { url: string | null; last_synced_at: string | null; last_rows: number | null };
+export type SheetLink = {
+  url: string | null; last_synced_at: string | null; last_rows: number | null;
+  blocked_at: string | null; blocked_reason: string | null; allow_shrink: boolean;
+};
 export async function getSheetLink() {
   return rpc<SheetLink>('get_sheet_link', {});
 }

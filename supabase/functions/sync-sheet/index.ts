@@ -2,12 +2,15 @@
 // 由 Supabase Cron 每 10 分鐘呼叫（scripts/sheet-sync/schedule.sql）；單向同步，試算表上的修改會在下次同步被覆蓋。
 // 每次整份重寫：某次失敗時，下一次會補齊。先寫新資料、再清掉多出來的舊列，同步中不會看到空白表。
 // 每天 22:10 另以 {"mode":"verify"} 呼叫：先比對資料庫與試算表、把結果記在「每日核對」分頁，再重新同步。
+// 防護：這次要寫入的列數比試算表現有的少一半以上（或變成 0）時不覆蓋，暫停同步並寄通知（只寄第一次）；
+//       管理者在設定頁按「允許下一次同步」後才恢復。資料庫若被改壞，試算表會保留出事前的內容。
 // 為了能直接在 Supabase Dashboard 貼上部署，本檔不依賴其他檔案（Google token 程式與 ocr-receipt 相同）。
 //
 // 需要的 secrets：
 //   FIREBASE_SERVICE_ACCOUNT  與 admin-users、ocr-receipt 共用；試算表要分享給這個服務帳戶（編輯者）
 //   SHEET_ID                  試算表網址 /d/ 與 /edit 之間那一段
 //   SYNC_SECRET               Cron 呼叫時帶的密語（x-sync-secret），與 Vault 的 sheet_sync_secret 相同
+//   ALERT_URL、ALERT_SECRET   暫停時寄通知用：試算表 Apps Script 網址與 MAIL_SECRET（與 Vault daily_mail_url、daily_mail_secret 相同）
 // 平台自動提供：SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY（只用來呼叫唯讀的 sheet_sync_data() 與記錄同步時間的 sheet_sync_done()）
 
 type ServiceAccount = { project_id: string; client_email: string; private_key: string };
@@ -89,7 +92,7 @@ async function googleAccessToken(sa: ServiceAccount): Promise<string> {
 }
 
 // ── 讀取資料：資料庫函式 sheet_sync_data()（只開放給 service_role，唯讀） ───────────
-async function loadData(): Promise<{ orders: Order[]; items: Item[]; devices: Device[] }> {
+async function loadData(): Promise<{ allow_shrink: boolean; orders: Order[]; items: Item[]; devices: Device[] }> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sheet_sync_data`, {
     method: 'POST',
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
@@ -99,8 +102,8 @@ async function loadData(): Promise<{ orders: Order[]; items: Item[]; devices: De
   return await res.json();
 }
 
-async function buildRows(): Promise<string[][]> {
-  const { orders, items, devices } = await loadData();
+async function buildRows(): Promise<{ rows: string[][]; allowShrink: boolean }> {
+  const { allow_shrink, orders, items, devices } = await loadData();
   const itemIndex = new Map(items.map((it, i) => [it.item_id, i]));
   const devsByOrder = new Map<string, Device[]>();
   for (const d of devices) {
@@ -126,7 +129,7 @@ async function buildRows(): Promise<string[][]> {
         d.note ?? '', o.order_note ?? '']);
     }
   }
-  return rows.map((r) => r.map((v) => String(v ?? '')));
+  return { rows: rows.map((r) => r.map((v) => String(v ?? ''))), allowShrink: !!allow_shrink };
 }
 
 // ── Google 試算表 ─────────────────────────────────────────
@@ -172,6 +175,7 @@ async function writeSheet(call: SheetCall, rows: string[][]) {
         ['最後同步', fmtDateTime(new Date().toISOString())],
         ['列數', String(rows.length - 1)],
         ['說明', '由預購商品追蹤系統每 10 分鐘自動更新；在這裡修改會被覆蓋，請到系統修改。每天 22:10 核對一次，結果在「每日核對」分頁。'],
+        ['狀態', '正常'],
       ] },
     ],
   });
@@ -190,6 +194,37 @@ async function compareSheet(call: SheetCall, rows: string[][]) {
   const diff = new Set<string>();
   for (const [k, n] of count) if (n !== 0) diff.add(JSON.parse(k)[0] || '（空白訂單編號）');
   return { sheetRows: sheetRows.length - 1, diff: [...diff].sort() };
+}
+
+// 試算表目前的資料列數（不含表頭）
+async function sheetRowCount(call: SheetCall) {
+  const got = await call(`/values/${encodeURIComponent(`${tab(DATA_TAB)}!A2:A`)}`, 'GET');
+  return (got.values ?? []).filter((r: unknown[]) => String(r[0] ?? '') !== '').length;
+}
+
+// 少一半以上、或從有資料變成 0：視為異常
+const shrinkTooMuch = (existing: number, next: number) => (existing > 0 && next === 0) || (existing >= 10 && next < existing / 2);
+
+async function serviceRpc(fn: string, args: unknown) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) throw new HttpError(500, 'DB_WRITE_FAILED', await res.text());
+  return await res.json().catch(() => null);
+}
+
+// 暫停通知：請試算表的 Apps Script 寄信（失敗只記錄）
+async function sendAlert(message: string) {
+  const url = Deno.env.get('ALERT_URL');
+  const secret = Deno.env.get('ALERT_SECRET');
+  if (!url || !secret) { console.error('sync-sheet alert not configured'); return; }
+  const res = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret, action: 'sync_alert', message }), redirect: 'manual',
+  });
+  if (res.status >= 400) console.error('sync-sheet alert failed', res.status);
 }
 
 // 記下最後同步時間與列數（設定頁顯示）；失敗只記錄，不影響這次同步
@@ -211,8 +246,30 @@ Deno.serve(async (req) => {
     if (!secret || req.headers.get('x-sync-secret') !== secret) throw new HttpError(401, 'UNAUTHENTICATED');
     const verify = (await req.json().catch(() => null))?.mode === 'verify';
     const t0 = Date.now();
-    const rows = await buildRows();
+    const { rows, allowShrink } = await buildRows();
     const call = await openSheet();
+
+    const existing = await sheetRowCount(call);
+    const next = rows.length - 1;
+    if (!allowShrink && shrinkTooMuch(existing, next)) {
+      const reason = `試算表現有 ${existing} 列，這次只有 ${next} 列`;
+      const first = await serviceRpc('sheet_sync_block', { p_reason: reason });
+      await call('/values:batchUpdate', 'POST', { valueInputOption: 'RAW', data: [
+        { range: `${tab(INFO_TAB)}!A4`, values: [['狀態', `⚠ 同步已暫停（${fmtDateTime(new Date().toISOString())}）：${reason}。資料確認正確後，請管理者到系統「設定」允許下一次同步。`]] },
+      ] });
+      if (verify) {
+        await call(`/values/${encodeURIComponent(`${tab(CHECK_TAB)}!A1`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, 'POST', {
+          values: [[fmtDateTime(new Date().toISOString()), String(next), String(existing), '同步已暫停', '', reason]],
+        });
+      }
+      if (first) {
+        await sendAlert(`${reason}，減少超過一半，系統沒有覆蓋試算表，同步已暫停。\n`
+          + '可能是資料庫資料遺失或被改壞，也可能是刻意清除（例如上線前清除測試資料）。\n'
+          + '試算表保留的是暫停前的內容。確認資料正確後，請到系統「設定 → Google 試算表同步」按「允許下一次同步」。');
+      }
+      console.error('sync-sheet blocked', reason);
+      return reply(200, { blocked: true, rows: next, sheet_rows: existing });
+    }
 
     let check = null;
     if (verify) {

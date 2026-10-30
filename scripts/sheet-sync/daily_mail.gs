@@ -4,6 +4,7 @@
 //                標題與附件檔名同網頁匯出：預購訂單_YYYYMMDD（台北日期）。寄件人是這份試算表的擁有者。
 //   action = 'check_backup'：每天 09:00 檢查雲端硬碟裡有沒有當天 03:00 的資料庫備份，沒有就寄通知
 //                （scripts/sheet-sync/backup_check.sql）。Mac mini 關機、休眠、備份失敗或雲端硬碟沒同步都會通知。
+//   action = 'sync_alert'：試算表同步因資料大量減少而暫停時，由 Edge Function sync-sheet 呼叫寄通知（message 為內容）。
 // 指令碼屬性 MAIL_SECRET 要與 Supabase Vault 的 daily_mail_secret 相同。
 
 const MAIL_TO = 'istore.tc@istore.com.tw';
@@ -19,6 +20,14 @@ function doPost(e) {
   try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { body = {}; }
   if (!secret || body.secret !== secret) return ContentService.createTextOutput('UNAUTHENTICATED');
   if (body.action === 'check_backup') return ContentService.createTextOutput(JSON.stringify(checkBackup()));
+  if (body.action === 'sync_alert') {
+    MailApp.sendEmail({
+      to: BACKUP_ALERT_TO,
+      subject: '【預購追蹤】試算表同步已暫停',
+      body: String(body.message || '') + '\n\n此信由預購商品追蹤系統自動寄出。',
+    });
+    return ContentService.createTextOutput('OK');
+  }
   sendDailyExport();
   return ContentService.createTextOutput('OK');
 }

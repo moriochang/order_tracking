@@ -391,6 +391,20 @@ function SheetSection({ onSaved }: { onSaved: () => void }) {
   const value = url ?? link.data?.url ?? '';
   const minutesAgo = link.data?.last_synced_at ? Math.round((Date.now() - Date.parse(link.data.last_synced_at)) / 60000) : null;
 
+  async function allowShrink() {
+    setBusy(true); setError(null); setDone('');
+    try {
+      await rpc('admin_allow_sheet_shrink', {});
+      setDone('已允許，下一次同步（10 分鐘內）會用目前的資料覆蓋試算表');
+      link.reload();
+      onSaved();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     setBusy(true); setError(null); setDone('');
     try {
@@ -410,13 +424,25 @@ function SheetSection({ onSaved }: { onSaved: () => void }) {
     <section className="card stack">
       <h2>Google 試算表同步</h2>
       <p className="small muted">
-        訂單每 10 分鐘自動同步到 Google 試算表（欄位與匯出相同），每天 22:10 核對一次。
+        訂單每 10 分鐘自動同步到 Google 試算表（欄位與匯出相同），每天 22:10 核對一次。資料比試算表少一半以上時會暫停同步並寄信通知。
         填入網址後，門市檢視、主管、管理者在「訂單查詢」會看到「開啟 Google 試算表」；能不能打開仍由試算表的共用名單決定。
       </p>
       <div className="small">
         最後同步：{link.data?.last_synced_at ? `${fmtDateTime(link.data.last_synced_at)}（${link.data.last_rows ?? 0} 列）` : '尚無紀錄'}
-        {minutesAgo !== null && minutesAgo > 30 && <span className="error-text">　⚠ 已超過 30 分鐘沒有同步，請檢查</span>}
+        {minutesAgo !== null && minutesAgo > 30 && !link.data?.blocked_at && <span className="error-text">　⚠ 已超過 30 分鐘沒有同步，請檢查</span>}
       </div>
+      {link.data?.blocked_at && (
+        <div className="alert error stack">
+          <div>⚠ 同步已暫停（{fmtDateTime(link.data.blocked_at)} 起）：{link.data.blocked_reason}。
+            資料比試算表少了一半以上，系統沒有覆蓋試算表，試算表保留的是暫停前的內容。</div>
+          <div>如果是刻意清除（例如上線前清除測試資料），或已確認資料正確，按下方按鈕；否則請先檢查資料庫，必要時用備份還原。</div>
+          <div className="row gap end">
+            {link.data.allow_shrink
+              ? <span>已允許，等待下一次同步…</span>
+              : <button onClick={allowShrink} disabled={busy}>確認資料正確，允許下一次同步</button>}
+          </div>
+        </div>
+      )}
       <div className="row gap">
         <input className="grow" aria-label="試算表網址" placeholder="https://docs.google.com/spreadsheets/d/…" value={value}
           onChange={(e) => setUrl(e.target.value)} />

@@ -54,7 +54,9 @@ export function HomePage() {
       {sheet.data?.url && (
         <p className="small">
           Google 試算表最後同步：{syncedAt ? `${fmtDateTime(syncedAt)}（${sheet.data.last_rows ?? 0} 列）` : '尚無紀錄'}
-          {stale && <span className="error-text">　⚠ 已超過 30 分鐘沒有同步</span>}
+          {sheet.data.blocked_at
+            ? <span className="error-text">　⚠ 同步已暫停：{sheet.data.blocked_reason}{me.role === 'admin' ? '（請到設定確認）' : '（請通知管理者）'}</span>
+            : stale && <span className="error-text">　⚠ 已超過 30 分鐘沒有同步</span>}
         </p>
       )}
 

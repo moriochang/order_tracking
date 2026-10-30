@@ -43,3 +43,26 @@ test('T81 試算表連結：管理者設定、能匯出的人取得、同步程�
   const log = await as(db, 'admin', `select after_data from audit_logs where action = 'admin_set_sheet_link'`);
   assert.deepEqual(log[0].after_data, { sheet_url: URL });
 });
+
+test('T82 同步防護：暫停只通知一次；管理者允許後下一次同步解除', async (t) => {
+  const db = await freshDb(); t.after(() => db.close());
+  const asService = (sql, params = []) => db.transaction(async (tx) => {
+    await tx.exec('set local role service_role');
+    return (await tx.query(sql, params)).rows;
+  });
+  assert.equal((await asService(`select sheet_sync_block('42 → 0') as r`))[0].r, true);
+  assert.equal((await asService(`select sheet_sync_block('42 → 0') as r`))[0].r, false);   // 已暫停，不再通知
+  let s = (await as(db, 'viewerA', 'select get_sheet_link() as r'))[0].r;
+  assert.ok(s.blocked_at); assert.equal(s.blocked_reason, '42 → 0'); assert.equal(s.allow_shrink, false);
+  assert.match(await expectError(as(db, 'staffA', 'select sheet_sync_block($1)', ['x'])), /permission denied/);
+
+  assert.equal(await expectError(as(db, 'managerA', 'select admin_allow_sheet_shrink()')), 'FORBIDDEN');
+  await as(db, 'admin', 'select admin_allow_sheet_shrink()');
+  assert.equal((await asService('select sheet_sync_data() as d'))[0].d.allow_shrink, true);
+
+  await asService('select sheet_sync_done(0)');
+  s = (await as(db, 'viewerA', 'select get_sheet_link() as r'))[0].r;
+  assert.equal(s.blocked_at, null); assert.equal(s.allow_shrink, false); assert.equal(s.last_rows, 0);
+  const log = await as(db, 'admin', `select after_data from audit_logs where action = 'admin_allow_sheet_shrink'`);
+  assert.deepEqual(log[0].after_data, { blocked_reason: '42 → 0' });
+});
