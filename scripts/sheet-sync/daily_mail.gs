@@ -82,3 +82,10 @@ function alertBackup(title, detail) {
   });
   return { ok: false, alert: title };
 }
+
+// 授權用：第一次（或新增權限後）在編輯器選這個函式按「執行」，完成授權；不會寄信
+function authorize() {
+  DriveApp.getFoldersByName(BACKUP_FOLDER).hasNext();
+  SpreadsheetApp.getActive().getName();
+  MailApp.getRemainingDailyQuota();
+}
