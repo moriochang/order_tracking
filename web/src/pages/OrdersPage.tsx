@@ -54,7 +54,9 @@ function sinceOf(period: string): string | undefined {
 }
 
 // 匯出：門市檢視、主管、管理者可用（門市同仁不行）；每次匯出先寫入紀錄（含查詢條件）
-function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Record<string, string> }) {
+function ExportBar({ orders, filters, oldestFirst, onToggleSort }: {
+  orders: OrderSummary[]; filters: Record<string, string>; oldestFirst: boolean; onToggleSort: () => void;
+}) {
   const me = useMe();
   const allowed = canExport(me.role);
   const [busy, setBusy] = useState(false);
@@ -69,7 +71,12 @@ function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Recor
   return (
     <div className="stack tight">
       <div className="row between wrap">
-        <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示前 100 筆，請縮小條件）' : ''}</span>
+        <div className="row gap">
+          <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示前 100 筆，請縮小條件）' : ''}</span>
+          <button type="button" className="secondary small-btn" onClick={onToggleSort} title="依建立時間排序，點一下切換">
+            {oldestFirst ? '舊 → 新' : '新 → 舊'}
+          </button>
+        </div>
         {allowed && <div className="row gap">
           <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportXlsx)}>
             {busy ? '匯出中…' : '匯出 Excel'}
@@ -154,12 +161,6 @@ export function OrdersPage() {
             autoCapitalize={byModel || field === 'model' || field === 'sn' ? 'characters' : undefined} />
         </div>
         <button type="submit">查詢</button>
-        {!byModel && (
-          <button type="button" className="secondary" onClick={() => setParam('sort', oldestFirst ? '' : 'old')}
-            title="依建立時間排序，點一下切換">
-            {oldestFirst ? '舊 → 新' : '新 → 舊'}
-          </button>
-        )}
       </form>
       {picking && (
         <DateRangePicker from={from} to={to} onClose={() => setPicking(false)}
@@ -177,7 +178,8 @@ export function OrdersPage() {
         </>
       ) : (
         <>
-          {result.data && <ExportBar orders={result.data} filters={{
+          {result.data && <ExportBar orders={result.data} oldestFirst={oldestFirst}
+            onToggleSort={() => setParam('sort', oldestFirst ? '' : 'old')} filters={{
             時間: period === 'custom' ? `${from ? fmtDate(from) : '不限'} – ${to ? fmtDate(to) : '不限'}` : PERIODS.find((x) => x.key === period)?.label ?? '',
             門市: store || '全部門市',
             狀態: STATUS_FILTERS.find((x) => x.key === status)?.label ?? '',
