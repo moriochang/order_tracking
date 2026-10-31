@@ -39,6 +39,7 @@ export type OrderSearch = {
   since?: string;      // 結帳日期起（YYYY-MM-DD）
   until?: string;      // 結帳日期迄（含當天）
   limit?: number;
+  oldestFirst?: boolean;   // 預設依建立時間由新到舊
 };
 export type SearchField = 'all' | 'order_no' | 'customer_name' | 'customer_phone' | 'receipt_no' | 'receipt_seq' | 'model' | 'sn';
 
@@ -51,7 +52,7 @@ async function orderIdsBy(field: 'model' | 'sn', q: string): Promise<string[]> {
 }
 
 export async function searchOrders(opts: OrderSearch) {
-  let query = supabase.from('v_order_summary').select('*').order('created_at', { ascending: false }).limit(opts.limit ?? 100);
+  let query = supabase.from('v_order_summary').select('*').order('created_at', { ascending: !!opts.oldestFirst }).limit(opts.limit ?? 100);
   if (opts.storeCode) query = query.eq('store_code', opts.storeCode);
   if (opts.since) query = query.gte('purchase_date', opts.since);
   if (opts.until) query = query.lte('purchase_date', opts.until);

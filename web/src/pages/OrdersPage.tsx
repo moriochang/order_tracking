@@ -69,7 +69,7 @@ function ExportBar({ orders, filters }: { orders: OrderSummary[]; filters: Recor
   return (
     <div className="stack tight">
       <div className="row between wrap">
-        <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示最近 100 筆，請縮小條件）' : ''}</span>
+        <span className="muted small">共 {orders.length} 筆{orders.length >= 100 ? '（只顯示前 100 筆，請縮小條件）' : ''}</span>
         {allowed && <div className="row gap">
           <button type="button" className="secondary small-btn" disabled={busy || !orders.length} onClick={() => run(exportXlsx)}>
             {busy ? '匯出中…' : '匯出 Excel'}
@@ -101,8 +101,10 @@ export function OrdersPage() {
   const range = period === 'custom' ? { since: from || undefined, until: to || undefined } : { since: sinceOf(period) };
   const status = params.get('status') ?? '';
   const field = (params.get('field') ?? 'all') as SearchField;
+  const oldestFirst = params.get('sort') === 'old';   // 預設由新到舊
   const result = useAsync(() => (byModel ? Promise.resolve(null)
-    : searchOrders({ q, field, storeCode: store || undefined, status, ...range })), [q, field, store, status, period, from, to, byModel]);
+    : searchOrders({ q, field, storeCode: store || undefined, status, oldestFirst, ...range })),
+    [q, field, store, status, period, from, to, byModel, oldestFirst]);
   const backlog = useAsync(() => (byModel ? searchBacklog({ q, storeCode: store || undefined, onlyBacklog: false }) : Promise.resolve(null)),
     [q, store, byModel, all]);
   const setParam = (k: string, v: string) => setParams((p) => { if (v) p.set(k, v); else p.delete(k); return p; });
@@ -152,6 +154,12 @@ export function OrdersPage() {
             autoCapitalize={byModel || field === 'model' || field === 'sn' ? 'characters' : undefined} />
         </div>
         <button type="submit">查詢</button>
+        {!byModel && (
+          <button type="button" className="secondary" onClick={() => setParam('sort', oldestFirst ? '' : 'old')}
+            title="依建立時間排序，點一下切換">
+            {oldestFirst ? '舊 → 新' : '新 → 舊'}
+          </button>
+        )}
       </form>
       {picking && (
         <DateRangePicker from={from} to={to} onClose={() => setPicking(false)}
